@@ -8,11 +8,11 @@ from routes_approval import router as approval_router
 
 app = FastAPI(title='ML Research App')
 
-
-
 origins = [
-    "*",  # or your frontend URL
+    "https://university-research-submission-system-1.onrender.com",
+    "http://localhost:3000",  # keep for local dev
 ]
+
 
 app.add_middleware(
     CORSMiddleware,
