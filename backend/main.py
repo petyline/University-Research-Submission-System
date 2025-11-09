@@ -8,16 +8,15 @@ from routes_approval import router as approval_router
 
 app = FastAPI(title='ML Research App')
 
-# ✅ Allow frontend requests (CORS fix)
+
+
 origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://frontend:3000",  # for Docker internal calls
+    "*",  # or your frontend URL
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # You can use ["*"] for testing if needed
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
