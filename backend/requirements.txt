@@ -5,6 +5,7 @@ pyjwt==2.9.0
 email-validator==2.2.0
 passlib[bcrypt]
 python-multipart
+python-jose[cryptography]
 
 # ML:
 numpy==2.1.3
