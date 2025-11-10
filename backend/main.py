@@ -4,6 +4,8 @@ from database import Base, engine
 from routes_auth import router as auth_router
 from routes_submissions import router as submissions_router
 from routes_approval import router as approval_router
+from routes_migration import router as migration_router
+
 #from seed import seed
 
 app = FastAPI(title='ML Research App')
@@ -35,6 +37,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(auth_router)
 app.include_router(submissions_router)
 app.include_router(approval_router)
+app.include_router(migration_router)
 
 # ✅ Root endpoint
 @app.get('/')
