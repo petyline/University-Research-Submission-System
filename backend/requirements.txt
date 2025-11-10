@@ -4,6 +4,7 @@ sqlalchemy==2.0.34
 pyjwt==2.9.0
 email-validator==2.2.0
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart
 python-jose[cryptography]
 
