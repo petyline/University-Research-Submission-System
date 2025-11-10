@@ -6,6 +6,7 @@ from models import User, RoleEnum
 from auth_jwt import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from passlib.hash import pbkdf2_sha256, bcrypt
 
 router = APIRouter(
     prefix="/auth",
@@ -60,12 +61,29 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
 
-    if not user or not pbkdf2_sha256.verify(payload.password, user.password_hash):
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    stored_hash = user.password_hash
+
+    # Detect bcrypt hash
+    if stored_hash.startswith("$2b$") or stored_hash.startswith("$2a$") or stored_hash.startswith("$2y$"):
+        # Verify using bcrypt
+        if not bcrypt.verify(payload.password, stored_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        # ✅ Upgrade hash to pbkdf2 automatically
+        user.password_hash = pbkdf2_sha256.hash(payload.password)
+        db.commit()
+    else:
+        # Verify using pbkdf2_sha256
+        if not pbkdf2_sha256.verify(payload.password, stored_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not user.is_approved:
         raise HTTPException(status_code=403, detail="Account pending admin approval")
