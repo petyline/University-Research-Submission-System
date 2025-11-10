@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 sqlalchemy==2.0.34
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 pyjwt==2.9.0
 email-validator==2.2.0
 passlib[bcrypt]
