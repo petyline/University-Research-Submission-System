@@ -1,14 +1,13 @@
-import os
+# database.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-DB_PATH = os.environ.get("DB_PATH", "./data/app.db")
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.environ.get("postgresql://university_research_db_user:ehnr44SsLZF7luJHWtoVukPJpzmCDNjn@dpg-d48otcre5dus73cb0680-a.oregon-postgres.render.com/university_research_db")  # <-- THIS WILL COME FROM RENDER
 
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+engine = create_engine(DATABASE_URL, connect_args={})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 def get_db():
