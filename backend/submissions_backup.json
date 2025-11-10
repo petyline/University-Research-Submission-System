@@ -1,0 +1,71 @@
+[
+  {
+    "id": 3,
+    "proposal_type": "Project",
+    "proposed_title": "An AI-Powered Voice-Based Web Platform for Locating and Connecting Users to Nearby Technicians in Real-Time.",
+    "background": "Finding reliable technicians nearby is often stressful and time-consuming, as most people rely on manual searches or word of mouth. With the rise of Artificial Intelligence (AI) and voice technology, it is now possible to simplify this process through smart, voice-based web platforms. By integrating AI speech recognition, natural language processing, and location-based services, users can easily speak their requests and get connected to available technicians in real time. This project focuses on developing an AI-powered voice-based web platform that helps users locate and connect with nearby technicians quickly, improving accessibility, convenience, and efficiency.",
+    "aim": "To develop an AI-powered voice-based web platform that helps users easily locate and connect with nearby technicians.",
+    "objectives": "1. To design a web platform that allows users to search for technicians using voice or text commands.\n2. To integrate real-time location tracking to display and connect users with nearby technicians.\n3. To implement an AI system that accurately processes voice input and matches users with suitable technicians based on proximity and availability.",
+    "methods": "1. User Interface (UI) Design:\n The web interface will be designed using HTML and CSS. It will include a clean and responsive layout with buttons, icons, and sections for voice input and displaying technician details. The design will focus on simplicity and easy navigation for users.\n Voice Recognition Feature:\n\n2. The Web Speech API in JavaScript will be used to capture and recognize the user\u2019s voice commands. When a user speaks (for example, \u201cI need an electrician\u201d), the system will convert the speech into text automatically.\n\n\n3. Technician Data Setup:\nA small set of sample technician information will be stored directly in the JavaScript file (without using any database). Each technician will have details such as name, skill, and location.\n\n\n4.Search and Matching Process:\n JavaScript will process the recognized text, compare it with the stored technician data, and display the matching technician(s) on the screen instantly.\n\n\n5, Testing and Refinement:\nThe system will be tested on different browsers to ensure that the voice recognition, user interface, and matching functions all work smoothly.",
+    "expected_results": "The expected result of this project is a functional web platform that allows users to find nearby technicians easily through voice commands. The system should be able to:\n\n\n1.Accept and recognize the user\u2019s spoken request using the Web Speech API.\n\n\n2. Convert the user\u2019s voice input into text automatically.\n\n\n3. Match the spoken request with the available technician data stored in JavaScript.\n\n\n4. Display the name, skill, and location of the matching technician(s) on the web page.\n\n\n5.Provide a simple, responsive, and attractive user interface that works smoothly on web browsers.",
+    "literature_review": "According to Singh and Sharma (2021), the integration of Artificial Intelligence (AI) with web technologies has significantly enhanced the efficiency of service delivery and user interaction. Li et al. (2020) emphasized that AI-driven voice interfaces simplify human\u2013computer communication by enabling natural speech recognition, reducing the need for manual input. Similarly, Kumar and Patel (2022) noted that voice-based systems, powered by Natural Language Processing (NLP), have become key tools in developing intelligent, human-centered applications.\n\nAdeyemi et al. (2021) highlighted that locating reliable service providers, especially technicians, remains a challenge in many regions due to the lack of centralized digital platforms. They suggested that integrating AI with geolocation technology can bridge this gap by connecting users to nearby professionals in real time. Chowdhury and Rahman (2023) further argued that voice-enabled search systems improve accessibility and inclusivity, particularly for users with limited literacy or physical constraints.\n\nRecent advancements in AI frameworks and APIs, such as Google Speech-to-Text and Dialogflow, have made it easier to build smart web applications capable of processing natural language and responding intelligently (Hassan & George, 2022). Collectively, these studies demonstrate that combining AI speech recognition, NLP, and location-based services can revolutionize how users find and interact with service providers, ensuring faster, smarter, and more convenient connections.",
+    "similarity_score": 0.0,
+    "final_decision": "pending",
+    "lecturer_decision": "pending",
+    "lecturer_decision_at": null,
+    "admin_decision": "pending",
+    "student": {
+      "id": 6,
+      "name": "CHIKEZIE CHIMAOBI ANSELM",
+      "reg_number": "CMP/21/114993",
+      "email": "chimaobichikezie04@gmail.com"
+    },
+    "supervisor_id": 3
+  },
+  {
+    "id": 4,
+    "proposal_type": "Project",
+    "proposed_title": "Web-Based AI Study Partner for Exam Preparation",
+    "background": "Artificial Intelligence (AI) has become a major driver of innovation in education, offering smart systems that assist students in learning more effectively. According to Woolf (2010), intelligent tutoring systems can mimic the role of a human tutor by providing personalized instruction and adaptive feedback. In recent years, Natural Language Processing (NLP) has been used to extract meaningful insights from educational materials and generate practice questions automatically (Mou et al., 2021).\nTraditional e-learning platforms mainly provide static notes and multiple-choice questions, which often fail to address individual learning needs (Alamri et al., 2019). However, with advancements in machine learning and web-based technologies, intelligent study tools now have the potential to deliver dynamic and personalized study experiences accessible from any device (Singh & Thurman, 2019).\nChatbot-based systems, in particular, allow real-time interaction and self-paced learning. Research by Okonkwo and Ade-Ibijola (2021) emphasized that chatbots can improve student engagement and knowledge retention when properly designed. Despite these innovations, many systems still lack full automation in question generation, performance tracking, and adaptability.\nThe proposed Web-Based AI Study Partner for Exam Preparation seeks to bridge this gap by using NLP to analyze uploaded study materials, generate relevant practice questions, provide instant feedback, and store user performance history for personalized improvement.",
+    "aim": "To design and develop a web-based AI system that helps students prepare for exams by generating practice questions, grading answers, and providing instant feedback.",
+    "objectives": "Allow users to upload notes or enter text manually.\n\nUse NLP to extract key points and create multiple-choice questions.\n\nProvide automatic grading and instant feedback.\n\nTrack users\u2019 performance and progress.\n\nEnsure easy access through a responsive web interface.",
+    "methods": "The system will be built with HTML, CSS, and JavaScript (React) for the frontend.",
+    "expected_results": "The system will generate exam-style questions from notes, grade users instantly, and display performance reports. Students will be able to study more efficiently and identify weak areas faster through an intelligent, easy-to-use web app.",
+    "literature_review": "Artificial Intelligence has become an essential part of modern education, improving the way knowledge is delivered and evaluated. According to Woolf (2010), intelligent tutoring systems simulate the behavior of human tutors by offering adaptive and personalized learning experiences. Similarly, Mou et al. (2021) noted that NLP techniques can extract useful information from educational materials to generate meaningful learning content such as quizzes and practice questions.\nTraditional e-learning platforms, as Alamri et al. (2019) highlighted, often lack adaptability and engagement features. However, with advancements in machine learning, web technologies now enable systems that adjust to user performance and deliver personalized study plans (Singh & Thurman, 2019).\nRecent studies by Okonkwo and Ade-Ibijola (2021) also showed that chatbot-based systems improve engagement, motivation, and self-directed learning among students. Despite these improvements, most current platforms still lack full automation, feedback storage, and real-time personalization \u2014 areas this project seeks to address through an intelligent web-based study partner.",
+    "similarity_score": 18.95,
+    "final_decision": "pending",
+    "lecturer_decision": "pending",
+    "lecturer_decision_at": null,
+    "admin_decision": "pending",
+    "student": {
+      "id": 7,
+      "name": "NWOBU CHUKWUEMEKA EMMANUEL ",
+      "reg_number": "CMP/21/113918",
+      "email": "Chukwuemekaemmanuel2008@gmail.com"
+    },
+    "supervisor_id": 3
+  },
+  {
+    "id": 5,
+    "proposal_type": "Project",
+    "proposed_title": "Development of an Online Gift Platform for Students",
+    "background": " As a final-year student, I have noticed that many graduating students find it stressful to order and organize gifts such as cakes, flowers, money bouquets, and gift boxes during their sign-out or graduation period. Most times, students have to move from one vendor to another to make orders, and this wastes time, causes confusion, and sometimes results in poor coordination or disappointment.\nTo solve this problem, I decided to develop an online gift platform where students can easily browse, view, and select different graduation gift items from verified vendors. The platform will serve as a link between students and vendors to make gift ordering easy, reliable, and stress-free. The project will be designed using HTML, CSS, and JavaScript to create a simple, responsive, and user-friendly website that can be accessed anytime and anywhere.",
+    "aim": "The main aim of this project is to create an online platform that allows final-year students to view and select various graduation gift items conveniently.",
+    "objectives": "1. To design a user-friendly website where students can view and select different graduation gift items.\n2. To enable customization options such as choosing cake designs, bouquet types, and budget ranges.\n3. To allow vendors to register, upload, and manage their gift items.\n4. To implement a secure order confirmation system for students.\n5. To make the process of ordering graduation gifts faster, easier, and more organized.",
+    "methods": "Design and implement this project using HTML, CSS, and JavaScript. The system will be a multi-page web application consisting of a Home Page, Gifts Page, Vendors Page, About Page, and Contact Page. Each page will have a clear and attractive layout with responsive design features to make it accessible on both phones and computers.\nThe gift data will be stored temporarily in a JSON file, which will be used to display items dynamically using JavaScript. I will apply simple form validation to ensure that users can enter correct details when placing orders or sending messages. I will also test the website for performance, usability, and responsiveness across different devices.\n",
+    "expected_results": "At the end of this project, I expect to have a fully functional and responsive online platform where final-year students can easily view, customize, and order various graduation gift items. The system will also help vendors promote their products and manage listings more effectively. This project will make the process of celebration planning faster, more transparent, and convenient for both students and vendors within the university environment.",
+    "literature_review": "Over the years, web-based platforms have improved how people buy, sell, and manage services. According to Laudon and Traver (2023), e-commerce systems provide convenience, accessibility, and improved customer experience compared to physical transactions. Many institutions now adopt web technologies to solve challenges related to student activities such as registration, event planning, and resource sharing.\nHowever, there is limited attention to developing systems that support student celebrations such as graduation or sign-out events. Bello (2022) pointed out that many students face issues locating reliable vendors and managing orders during celebrations. Platforms like Jumia and Konga already make online shopping easy, but they are not designed specifically for students or graduation gifts.\nThis project builds upon those existing ideas by creating a specialized online gift platform for students. It focuses on simplicity, customization, and vendor management. By using HTML, CSS, and JavaScript, the platform will allow students to easily view and select various graduation gift items while giving vendors the opportunity to showcase their products. This study aligns with current digital transformation trends, encouraging both students and small-scale vendors to embrace web technology for celebration planning.",
+    "similarity_score": 10.1,
+    "final_decision": "pending",
+    "lecturer_decision": "pending",
+    "lecturer_decision_at": null,
+    "admin_decision": "pending",
+    "student": {
+      "id": 4,
+      "name": "Nnamani Emmanuel Chidera",
+      "reg_number": "CSC/2025/001",
+      "email": "chiderannamani442@gmail.com"
+    },
+    "supervisor_id": 3
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "email": "obike.peter@mouau.edu.ng",
+    "password_hash": "$pbkdf2-sha256$29000$COEcQwihlJJybk3p/R9jLA$XGWbke1ym26LfCPJdr0qvT5YluvHwiZBNXy2wLWn3XY",
+    "role": "admin",
+    "is_approved": true,
+    "name": "Peter G. Obike (PhD)",
+    "id": 1,
+    "reg_number": null
+  },
+  {
+    "email": "lect1@uni.edu",
+    "password_hash": "$2b$12$vp7X2Lw7BS1XNCAaY3eT6.A65bdAIo8ShwaYWlqPu7Hpjx/v4wEOe",
+    "role": "lecturer",
+    "is_approved": false,
+    "name": "Dr. Ada",
+    "id": 2,
+    "reg_number": null
+  },
+  {
+    "email": "ugboaja.samuel@mouau.edu.ng",
+    "password_hash": "$2b$12$1uYJlHGLG2hqMQjgYEDf7OOUk7U0Bg9C30RT5MhbesVJggBgrlZs6",
+    "role": "lecturer",
+    "is_approved": true,
+    "name": "Dr Sam Ugboaja",
+    "id": 3,
+    "reg_number": null
+  },
+  {
+    "email": "chiderannamani442@gmail.com",
+    "password_hash": "$2b$12$SQRHaGEIrnOFBG7pbI1LHOiTNVRanLypzpSXkqH6Qnc0qsx7Ohm0K",
+    "role": "student",
+    "is_approved": true,
+    "name": "Nnamani Emmanuel Chidera",
+    "id": 4,
+    "reg_number": "CSC/2025/001"
+  },
+  {
+    "email": "student2@uni.edu",
+    "password_hash": "$2b$12$ifhaCGoEZ5Gomx3pB31Rvu8Xyc3TP3dRFRHg7fHYmpJas5OYkRphG",
+    "role": "student",
+    "is_approved": false,
+    "name": "John Student",
+    "id": 5,
+    "reg_number": "CSC/2025/002"
+  },
+  {
+    "email": "chimaobichikezie04@gmail.com",
+    "password_hash": "$2b$12$wEB/GSYFbwSazLq439KZIO2cC0SPUADGWB032A9wmPWOTX.nOM5qG",
+    "role": "student",
+    "is_approved": true,
+    "name": "CHIKEZIE CHIMAOBI ANSELM",
+    "id": 6,
+    "reg_number": "CMP/21/114993"
+  },
+  {
+    "email": "Chukwuemekaemmanuel2008@gmail.com",
+    "password_hash": "$2b$12$OgLiZbY3k/orEW8ypvYhCeHIO4EWxFaINRa84oo2O8kkHXncuNWHG",
+    "role": "student",
+    "is_approved": true,
+    "name": "NWOBU CHUKWUEMEKA EMMANUEL ",
+    "id": 7,
+    "reg_number": "CMP/21/113918"
+  },
+  {
+    "email": "admin@uni.edu",
+    "password_hash": "$2b$12$rUHuyhtkM8q.PmsTKK5Mve4NmNLvPKTteC1ynfFjy1jtfHhCZIolu",
+    "role": "admin",
+    "is_approved": false,
+    "name": "Admin",
+    "id": 8,
+    "reg_number": null
+  }
+]
