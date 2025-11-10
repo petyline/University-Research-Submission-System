@@ -81,7 +81,7 @@ export default function Login({ setUser }) {
       </div>
 
       <div className="text-sm text-gray-500 mt-2">
-        Seed accounts: admin@uni.edu/adminpass, lect1@uni.edu/lectpass1, student1@uni.edu/studpass1
+        Report all issues/observation to the Project Co-ordinator via Whatsapp: +2348034185981
       </div>
     </div>
   );
