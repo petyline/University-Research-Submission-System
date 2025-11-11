@@ -249,7 +249,7 @@ export default function AdminDashboard() {
 					
 					    <td className="p-2 text-center">
 					      <div className="flex justify-center">
-					        <CircularSimilarity value={item.similarity_score} />
+					        <CircularSimilarity value={s.similarity_score} />
 					      </div>
 					    </td>
 					
