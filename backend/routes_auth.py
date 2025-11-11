@@ -141,8 +141,35 @@ def approve_user(user_id: int, approve: bool, db: Session = Depends(get_db), cur
 # ADMIN - View All Users
 # -------------------------------
 @router.get("/users")
-def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can view all users")
 
-    return db.query(User).all()
+    users = db.query(User).all()
+
+    result = []
+    for u in users:
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "reg_number": u.reg_number,
+            "is_approved": u.is_approved,
+
+            # 👇 NEW: Return assigned supervisors list if student
+            "supervisors": [
+                {
+                    "id": sup.id,
+                    "name": sup.name,
+                    "email": sup.email
+                }
+                for sup in u.supervisors
+            ] if u.role == "student" else []
+        })
+
+    return result
+
