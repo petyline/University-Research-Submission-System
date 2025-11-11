@@ -299,31 +299,37 @@ export default function AdminDashboard() {
         {activeTab === 'users' && (
           <table className="w-full border-collapse border border-gray-300">
             <thead><tr className="bg-gray-100">
-              <th className="border p-2">Name</th>
-              <th className="border p-2">Email</th>
-              <th className="border p-2">Role</th>
-              <th className="border p-2">Reg/Staff Number</th>
-              <th className="border p-2">Approved</th>
-            </tr></thead>
+			  <th className="border p-2">Name</th>
+			  <th className="border p-2">Email</th>
+			  <th className="border p-2">Role</th>
+			  <th className="border p-2">Reg/Staff Number</th>
+			  <th className="border p-2">Supervisor</th>
+			  <th className="border p-2">Approved</th>
+			</tr></thead>
             <tbody>
               {allUsers.length === 0 ? (
                 <tr><td colSpan="5" className="text-center p-4">No users</td></tr>
               ) : (
                 allUsers.map(u => (
                   <tr
-                    key={u.id}
-                    className="border-b cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={() => openModal(u, 'user')}
-                  >
-                    <td className="p-2 flex items-center gap-2">
-                      {u.name}
-                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Click to view</span>
-                    </td>
-                    <td className="p-2">{u.email}</td>
-                    <td className="p-2">{u.role}</td>
-                    <td className="p-2">{u.reg_number || '-'}</td>
-                    <td className="p-2">{u.is_approved ? 'Yes' : 'No'}</td>
-                  </tr>
+					  key={u.id}
+					  className="border-b cursor-pointer hover:bg-blue-50 transition-colors"
+					  onClick={() => openModal(u, 'user')}
+					>
+					  <td className="p-2">{u.name}</td>
+					  <td className="p-2">{u.email}</td>
+					  <td className="p-2">{u.role}</td>
+					  <td className="p-2">{u.reg_number || '-'}</td>
+					  <td className="p-2">
+					    {u.role === "student"
+					      ? (u.supervisors?.length > 0
+					          ? u.supervisors.map(sup => sup.name).join(", ")
+					          : <span className="text-red-600">None</span>)
+					      : "-"
+					    }
+					  </td>
+					  <td className="p-2">{u.is_approved ? 'Yes' : 'No'}</td>
+					</tr>
                 ))
               )}
             </tbody>
