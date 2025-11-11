@@ -338,33 +338,60 @@ export default function AdminDashboard() {
 
         {/* Assign Supervisor Tab */}
         {activeTab === "assign" && (
-          <div className="max-w-lg mx-auto space-y-4">
-            <h2 className="text-lg font-bold mb-2">Assign Supervisor to Student</h2>
-            <select
-              value={selectedStudent || ""}
-              onChange={e => setSelectedStudent(Number(e.target.value))}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Student</option>
-              {students.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.reg_number})</option>
-              ))}
-            </select>
-            <select
-              value={selectedLecturer || ""}
-              onChange={e => setSelectedLecturer(Number(e.target.value))}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Supervisor</option>
-              {lecturers.map(l => (
-                <option key={l.id} value={l.id}>{l.name} ({l.email})</option>
-              ))}
-            </select>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={assignSupervisor}>
-              Assign
-            </button>
-          </div>
-        )}
+		  <div className="max-w-lg mx-auto space-y-4">
+		    <h2 className="text-lg font-bold mb-2">Assign Supervisor to Student</h2>
+		
+		    {/* Search box */}
+		    <input
+		      type="text"
+		      placeholder="Search student by name or reg number"
+		      className="w-full p-2 border rounded"
+		      onChange={(e) => {
+		        const q = e.target.value.toLowerCase();
+		        setStudents(prev =>
+		          prev.map(st => ({
+		            ...st,
+		            hidden: !(
+		              st.name.toLowerCase().includes(q) ||
+		              (st.reg_number || "").toLowerCase().includes(q)
+		            )
+		          }))
+		        );
+		      }}
+		    />
+		
+		    <select
+		      value={selectedStudent || ""}
+		      onChange={e => setSelectedStudent(Number(e.target.value))}
+		      className="w-full p-2 border rounded"
+		    >
+		      <option value="">Select Student</option>
+		      {students.filter(s => !s.hidden).map(s => (
+		        <option key={s.id} value={s.id}>
+		          {s.name} ({s.reg_number})
+		        </option>
+		      ))}
+		    </select>
+		
+		    <select
+		      value={selectedLecturer || ""}
+		      onChange={e => setSelectedLecturer(Number(e.target.value))}
+		      className="w-full p-2 border rounded"
+		    >
+		      <option value="">Select Supervisor</option>
+		      {lecturers.map(l => (
+		        <option key={l.id} value={l.id}>
+		          {l.name} ({l.email})
+		        </option>
+		      ))}
+		    </select>
+		
+		    <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={assignSupervisor}>
+		      Assign
+		    </button>
+		  </div>
+		)}
+
       </main>
 
 	      {/* Shared Modal for User / Submission */}
