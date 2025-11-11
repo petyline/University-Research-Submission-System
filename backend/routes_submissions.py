@@ -223,3 +223,55 @@ def get_student_submissions(student_id: int, current_user: User = Depends(get_cu
 
     submissions = db.query(Submission).filter(Submission.student_id == student_id).order_by(Submission.created_at.desc()).all()
     return submissions
+
+@router.get("/submissions")
+def get_all_submissions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Admin and lecturers only:
+      - Admin sees all submissions
+      - Lecturer sees submissions only from students they supervise
+    """
+
+    query = db.query(Submission)
+
+    # Lecturer restriction
+    if current_user.role == "lecturer":
+        query = query.filter(Submission.supervisor_id == current_user.id)
+
+    # Students are NOT allowed to view this
+    if current_user.role == "student":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    submissions = query.order_by(Submission.created_at.desc()).all()
+
+    result = []
+    for s in submissions:
+        result.append({
+            "id": s.id,
+            "proposal_type": s.proposal_type.value if hasattr(s.proposal_type, "value") else s.proposal_type,
+            "proposed_title": s.proposed_title,
+            "similarity_score": float(s.similarity_score or 0),
+
+            "student": {
+                "id": s.student.id,
+                "name": s.student.name,
+                "email": s.student.email,
+                "reg_number": s.student.reg_number
+            } if s.student else None,
+
+            "supervisor": {
+                "id": s.supervisor.id,
+                "name": s.supervisor.name,
+                "email": s.supervisor.email
+            } if s.supervisor else None,
+
+            "lecturer_decision": s.lecturer_decision,
+            "final_decision": s.final_decision,
+            "created_at": s.created_at
+        })
+
+    return result
+
