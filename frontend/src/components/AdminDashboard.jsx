@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SimilarityMeter from './SimilarityMeter';
+import CircularSimilarity from './CircularSimilarity'; // this is your round one
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('submissions'); // 'submissions' | 'pending' | 'users' | 'assign' | 'settings'
@@ -211,35 +211,52 @@ export default function AdminDashboard() {
         {/* Submissions Tab */}
         {activeTab === 'submissions' && (
           <table className="w-full border-collapse border border-gray-300">
-            <thead><tr className="bg-gray-100">
-              <th className="border p-2">Student</th>
-              <th className="border p-2">Similarity</th>
-              <th className="border p-2">Lecturer Decision</th>
-              <th className="border p-2">Final Decision</th>
-            </tr></thead>
+            <thead>
+			  <tr className="bg-gray-100">
+			    <th className="border p-2">Student</th>
+			    <th className="border p-2">Supervisor</th>
+			    <th className="border p-2">Type</th>
+			    <th className="border p-2">Similarity</th>
+			    <th className="border p-2">Lecturer Decision</th>
+			    <th className="border p-2">Final Decision</th>
+			  </tr>
+			</thead>
+
             <tbody>
               {subs.length === 0 ? (
                 <tr><td colSpan="4" className="text-center p-4">No submissions</td></tr>
               ) : (
                 subs.map(s => (
-                  <tr
-                    key={s.id}
-                    className="border-b cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={() => openModal(s, 'submission')}
-                  >
-                    <td className="p-2 flex items-center gap-2">
-                      {s.student ? `${s.student.name} (${s.student.reg_number})` : 'Unknown'}
-                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        Click to view
-                      </span>
-                    </td>
-                    <td className="p-2" style={{ width: 240 }}>
-                      <SimilarityMeter score={s.similarity_score || 0} />
-                    </td>
-                    <td className="p-2">{s.lecturer_decision || '-'}</td>
-                    <td className="p-2">{s.final_decision || '-'}</td>
-                  </tr>
-                ))
+					  <tr
+					    key={s.id}
+					    className="border-b cursor-pointer hover:bg-blue-50 transition-colors"
+					    onClick={() => openModal(s, 'submission')}
+					  >
+					    <td className="p-2 flex items-center gap-2">
+					      {s.student ? `${s.student.name} (${s.student.reg_number})` : 'Unknown'}
+					    </td>
+					
+					    <td className="p-2">
+					      {s.supervisor ? `${s.supervisor.name}` : '-'}
+					    </td>
+					
+					    <td className="p-2">
+					      {s.proposal_type === 'Seminar' || s.proposal_type === 'Project'
+					        ? 'Undergraduate'
+					        : 'Postgraduate'}
+					      {' '}({s.proposal_type})
+					    </td>
+					
+					    <td className="p-2 text-center">
+					      <div className="flex justify-center">
+					        <CircularSimilarity score={Number(s.similarity_score || 0)} />
+					      </div>
+					    </td>
+					
+					    <td className="p-2">{s.lecturer_decision || '-'}</td>
+					    <td className="p-2">{s.final_decision || '-'}</td>
+					  </tr>
+					))
               )}
             </tbody>
           </table>
