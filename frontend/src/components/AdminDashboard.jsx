@@ -542,7 +542,19 @@ export default function AdminDashboard() {
                 </label>
               </div>
             </div>
-
+			<div className="border rounded p-4">
+			  <h3 className="font-semibold mb-2">Submission Limit</h3>
+			  <label className="flex items-center gap-2">
+			    <input
+			      type="checkbox"
+			      checked={settings.allow_multiple_submissions}
+			      onChange={(e) =>
+			        setSettings((s) => ({ ...s, allow_multiple_submissions: e.target.checked }))
+			      }
+			    />
+			    Allow multiple submissions per student (Seminar/Project)
+			  </label>
+			</div>
             <button
               onClick={saveSettings}
               className="bg-blue-600 text-white px-4 py-2 rounded"
