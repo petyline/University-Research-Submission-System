@@ -50,7 +50,8 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           undergrad_mode: settings.undergrad_mode,
-          postgrad_mode: settings.postgrad_mode
+          postgrad_mode: settings.postgrad_mode,
+		  allow_multiple_submissions: settings.allow_multiple_submissions,
         })
       });
       if (!res.ok) throw new Error(await res.text());
