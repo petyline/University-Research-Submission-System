@@ -94,6 +94,19 @@ def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
     settings = db.query(Settings).first()
     undergrad_mode = (settings.undergrad_mode if settings else "title")
     postgrad_mode = (settings.postgrad_mode if settings else "title_plus")
+    allow_multiple = (settings.allow_multiple_submissions if settings else False)
+
+    # 🔒 Restrict duplicate submissions
+    if not allow_multiple:
+        existing_same_type = db.query(Submission).filter(
+            Submission.student_id == student.id,
+            Submission.proposal_type == payload.proposal_type
+        ).first()
+        if existing_same_type:
+            raise HTTPException(
+                status_code=400,
+                detail=f"You have already submitted a {payload.proposal_type}. Multiple submissions are not allowed."
+            )
 
     level = get_degree_level(payload.proposal_type)
     mode = undergrad_mode if level == "undergrad" else postgrad_mode
