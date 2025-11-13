@@ -25,6 +25,8 @@ class Settings(Base):
     id = Column(Integer, primary_key=True, index=True)
     undergrad_mode = Column(String, default="title")       # "title" or "title_plus"
     postgrad_mode = Column(String, default="title_plus")   # "title" or "title_plus"
+    # NEW FIELD
+    allow_multiple_submissions = Column(Boolean, default=False)
 
 student_supervisors = Table(
     "student_supervisors",
