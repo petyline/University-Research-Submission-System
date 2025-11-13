@@ -163,26 +163,43 @@ def get_settings(
         db.refresh(s)
     return {"undergrad_mode": s.undergrad_mode, "postgrad_mode": s.postgrad_mode}
 
+
 @router.put("/admin/settings")
 def update_settings(
     undergrad_mode: str = Body(..., embed=True),
     postgrad_mode: str = Body(..., embed=True),
+    allow_multiple_submissions: bool = Body(False, embed=True),  # ✅ New field
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
+    # 🔒 Admin-only access
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admins only")
-    if undergrad_mode not in ("title","title_plus") or postgrad_mode not in ("title","title_plus"):
+
+    # Validate allowed modes
+    if undergrad_mode not in ("title", "title_plus") or postgrad_mode not in ("title", "title_plus"):
         raise HTTPException(status_code=400, detail="Modes must be 'title' or 'title_plus'")
 
+    # Retrieve or create settings record
     s = db.query(Settings).first()
     if not s:
         s = Settings()
         db.add(s)
+
+    # Update fields
     s.undergrad_mode = undergrad_mode
     s.postgrad_mode = postgrad_mode
+    s.allow_multiple_submissions = allow_multiple_submissions  # ✅ new setting
+
     db.commit()
     db.refresh(s)
-    return {"message":"Settings updated","undergrad_mode": s.undergrad_mode, "postgrad_mode": s.postgrad_mode}
+
+    return {
+        "message": "Settings updated successfully",
+        "undergrad_mode": s.undergrad_mode,
+        "postgrad_mode": s.postgrad_mode,
+        "allow_multiple_submissions": s.allow_multiple_submissions
+    }
+
 
 
