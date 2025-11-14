@@ -389,4 +389,3 @@ export default function StudentPanel({ user, setUser }) {
 
     </div>  {/* closing for entire dashboard */}
   );
-}
