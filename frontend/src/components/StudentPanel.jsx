@@ -192,7 +192,7 @@ export default function StudentPanel({ user, setUser }) {
       </div>
     );
   };
-
+}
 return (
   <div className="min-h-screen bg-gray-50">
 
