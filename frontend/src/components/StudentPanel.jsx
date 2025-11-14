@@ -1,4 +1,5 @@
 // src/components/StudentPanel.jsx
+import ChangePassword from "./ChangePassword";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -15,6 +16,11 @@ export default function StudentPanel({ user, setUser }) {
   const [editingId, setEditingId] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("submissions"); // add 'password' as possible tab later
+  const [showMenu, setShowMenu] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+
 
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -191,20 +197,64 @@ export default function StudentPanel({ user, setUser }) {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white shadow flex justify-between items-center px-6 py-3 border-b">
-        <h1 className="text-lg font-bold text-blue-700">Student Dashboard</h1>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-600">👤 {user?.name || "Student"}</span>
-          <button
-            onClick={() => { setEditingId(null); setTitle(""); setBackground(""); setAim(""); setObjectives(""); setMethods(""); setExpectedResults(""); setLiteratureReview(""); }}
-            className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-          >
-            New Proposal
-          </button>
-          <button onClick={handleLogout} className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
-            Logout
-          </button>
-        </div>
-      </header>
+		  <h1 className="text-lg font-bold text-blue-700">Student Dashboard</h1>
+		
+		  <div className="flex items-center gap-4 text-sm relative">
+		    {/* Toggle Menu */}
+		    <div className="relative">
+		      <button
+		        onClick={() => setShowMenu((prev) => !prev)}
+		        className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition"
+		      >
+		        👤 {user?.name || "Student"}
+		        <svg
+		          xmlns="http://www.w3.org/2000/svg"
+		          className={`w-4 h-4 transform transition-transform ${showMenu ? "rotate-180" : "rotate-0"}`}
+		          fill="none"
+		          viewBox="0 0 24 24"
+		          stroke="currentColor"
+		        >
+		          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+		        </svg>
+		      </button>
+		
+		      {showMenu && (
+		        <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md z-50">
+		          <button
+		            onClick={() => setShowPasswordModal(true)}
+		            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+		          >
+		            Change Password
+		          </button>
+		          <button
+		            onClick={handleLogout}
+		            className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+		          >
+		            Logout
+		          </button>
+		        </div>
+		      )}
+		    </div>
+		
+		    {/* New Proposal Button */}
+		    <button
+		      onClick={() => {
+		        setEditingId(null);
+		        setTitle("");
+		        setBackground("");
+		        setAim("");
+		        setObjectives("");
+		        setMethods("");
+		        setExpectedResults("");
+		        setLiteratureReview("");
+		      }}
+		      className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+		    >
+		      New Proposal
+		    </button>
+		  </div>
+		</header>
+
 
       {/* Form */}
       <main className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
@@ -288,12 +338,13 @@ export default function StudentPanel({ user, setUser }) {
         )}
       </section>
 
-      {/* Modal */}
+      {/* Proposal View Modal */}
       {showModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-3xl w-full relative overflow-y-auto max-h-[85vh]">
             <button onClick={() => setShowModal(false)} className="absolute top-2 right-3 text-gray-600 hover:text-black">✕</button>
             <h3 className="text-lg font-semibold mb-3 text-gray-800">{selectedSubmission.proposed_title}</h3>
+
             <div className="space-y-4 text-sm text-gray-700">
               {[
                 ["Background", selectedSubmission.background],
@@ -314,6 +365,28 @@ export default function StudentPanel({ user, setUser }) {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPasswordModal(false);
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-black"
+            >
+              ✕
+            </button>
+
+            <ChangePassword API_URL={API_URL} token={token} />
+          </div>
+        </div>
+      )}
+
+    </div>  {/* closing for entire dashboard */}
   );
 }
