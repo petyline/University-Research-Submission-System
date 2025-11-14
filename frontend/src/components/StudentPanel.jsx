@@ -194,198 +194,228 @@ export default function StudentPanel({ user, setUser }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white shadow flex justify-between items-center px-6 py-3 border-b">
-		  <h1 className="text-lg font-bold text-blue-700">Student Dashboard</h1>
-		
-		  <div className="flex items-center gap-4 text-sm relative">
-		    {/* Toggle Menu */}
-		    <div className="relative">
-		      <button
-		        onClick={() => setShowMenu((prev) => !prev)}
-		        className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition"
-		      >
-		        👤 {user?.name || "Student"}
-		        <svg
-		          xmlns="http://www.w3.org/2000/svg"
-		          className={`w-4 h-4 transform transition-transform ${showMenu ? "rotate-180" : "rotate-0"}`}
-		          fill="none"
-		          viewBox="0 0 24 24"
-		          stroke="currentColor"
-		        >
-		          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-		        </svg>
-		      </button>
-		
-		      {showMenu && (
-		        <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md z-50">
-		          <button
-		            onClick={() => setShowPasswordModal(true)}
-		            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-		          >
-		            Change Password
-		          </button>
-		          <button
-		            onClick={handleLogout}
-		            className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
-		          >
-		            Logout
-		          </button>
-		        </div>
-		      )}
-		    </div>
-		
-		    {/* New Proposal Button */}
-		    <button
-		      onClick={() => {
-		        setEditingId(null);
-		        setTitle("");
-		        setBackground("");
-		        setAim("");
-		        setObjectives("");
-		        setMethods("");
-		        setExpectedResults("");
-		        setLiteratureReview("");
-		      }}
-		      className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-		    >
-		      New Proposal
-		    </button>
-		  </div>
-		</header>
+  <div className="min-h-screen bg-gray-50">
+    {/* Header */}
+    <header className="sticky top-0 z-10 bg-white shadow flex justify-between items-center px-6 py-3 border-b">
+      <h1 className="text-lg font-bold text-blue-700">Student Dashboard</h1>
 
-
-      {/* Form */}
-      <main className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">
-          {editingId ? "Edit Proposal" : "Submit New Proposal"}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block">
-            Proposal Type
-            <select
-              value={proposalType}
-              onChange={(e) => setProposalType(e.target.value)}
-              className="w-full p-2 border rounded mt-1"
+      <div className="flex items-center gap-4 text-sm relative">
+        {/* Toggle Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu((prev) => !prev)}
+            className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition"
+          >
+            👤 {user?.name || "Student"}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`w-4 h-4 transform transition-transform ${showMenu ? "rotate-180" : "rotate-0"}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <option>Seminar – Undergraduate</option>
-              <option>Project – Undergraduate</option>
-              <option>Dissertation – Postgraduate</option>
-              <option>Thesis – Postgraduate</option>
-            </select>
-          </label>
-
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Proposed Title" className="w-full p-2 border rounded" required />
-
-          <textarea value={background} onChange={(e) => setBackground(e.target.value)} placeholder="Background" className="w-full p-2 border rounded" required />
-          <textarea value={aim} onChange={(e) => setAim(e.target.value)} placeholder="Aim" className="w-full p-2 border rounded" required />
-          <textarea value={objectives} onChange={(e) => setObjectives(e.target.value)} placeholder="Objectives" className="w-full p-2 border rounded" required />
-          <textarea value={methods} onChange={(e) => setMethods(e.target.value)} placeholder="Methods" className="w-full p-2 border rounded" required />
-          <textarea value={expectedResults} onChange={(e) => setExpectedResults(e.target.value)} placeholder="Expected Results" className="w-full p-2 border rounded" required />
-          <textarea value={literatureReview} onChange={(e) => setLiteratureReview(e.target.value)} placeholder="Literature Review (150–300 words)" className="w-full p-2 border rounded h-32" required />
-
-          <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-            {editingId ? "Update Proposal" : "Submit Proposal"}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-        </form>
-      </main>
 
-      {/* Table */}
-      <section className="max-w-5xl mx-auto mt-8 bg-white rounded shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">My Submitted Proposals</h3>
-        {submissions.length === 0 ? (
-          <p className="text-gray-500 text-sm">No proposals submitted yet.</p>
-        ) : (
-          <table className="w-full text-sm border border-gray-200">
-            <thead>
-              <tr className="bg-gray-100 text-left text-gray-700">
-                <th className="p-2 border">Type</th>
-                <th className="p-2 border">Title</th>
-                <th className="p-2 border text-center">Similarity</th>
-                <th className="p-2 border text-center">Status</th>
-                <th className="p-2 border text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {submissions.map((item) => (
-                <tr key={item.id} className="hover:bg-blue-50 transition">
-                  <td className="p-2 border">{item.proposal_type}</td>
-                  <td className="p-2 border">{item.proposed_title}</td>
-                  <td className="p-2 border text-center">
-                    <SimilarityMeter value={item.similarity_score || 0} />
-                  </td>
-                  <td className="p-2 border text-center">
-                    {statusBadge(item.final_decision || "pending")}
-                  </td>
-                  <td className="p-2 border text-center space-x-3">
-                    <button onClick={() => handleView(item)} className="text-green-600 hover:underline">View</button>
-                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:underline">Edit</button>
-					<button
-					  onClick={() =>
-						window.open(`${API_URL}/submission/${selectedSubmission.id}/pdf?token=${localStorage.getItem("token")}`, "_blank")
-					  }
-					  className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
-					>
-					  Download PDF
-					</button>
-
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      {/* Proposal View Modal */}
-      {showModal && selectedSubmission && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-3xl w-full relative overflow-y-auto max-h-[85vh]">
-            <button onClick={() => setShowModal(false)} className="absolute top-2 right-3 text-gray-600 hover:text-black">✕</button>
-            <h3 className="text-lg font-semibold mb-3 text-gray-800">{selectedSubmission.proposed_title}</h3>
-
-            <div className="space-y-4 text-sm text-gray-700">
-              {[
-                ["Background", selectedSubmission.background],
-                ["Aim", selectedSubmission.aim],
-                ["Objectives", selectedSubmission.objectives],
-                ["Methods", selectedSubmission.methods],
-                ["Expected Results", selectedSubmission.expected_results],
-                ["Literature Review", selectedSubmission.literature_review],
-              ].map(([label, content]) => (
-                <div key={label}>
-                  <h4 className="font-semibold text-blue-700 mb-1">{label}</h4>
-                  <div className="bg-gray-50 border rounded p-2">
-                    {highlightText(content || "", selectedSubmission.similarity_score || 0)}
-                  </div>
-                </div>
-              ))}
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-md z-50">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(true);
+                  setShowMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >
+                Change Password
+              </button>
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+              >
+                Logout
+              </button>
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowPasswordModal(false);
+        {/* New Proposal Button */}
+        <button
+          onClick={() => {
+            setEditingId(null);
+            setTitle("");
+            setBackground("");
+            setAim("");
+            setObjectives("");
+            setMethods("");
+            setExpectedResults("");
+            setLiteratureReview("");
           }}
+          className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
         >
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
-            <button
-              onClick={() => setShowPasswordModal(false)}
-              className="absolute top-2 right-3 text-gray-500 hover:text-black"
-            >
-              ✕
-            </button>
+          New Proposal
+        </button>
+      </div>
+    </header>
 
-            <ChangePassword API_URL={API_URL} token={token} />
+    {/* Form */}
+    <main className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
+      <h2 className="text-xl font-bold mb-4 text-gray-800">
+        {editingId ? "Edit Proposal" : "Submit New Proposal"}
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <label className="block">
+          Proposal Type
+          <select
+            value={proposalType}
+            onChange={(e) => setProposalType(e.target.value)}
+            className="w-full p-2 border rounded mt-1"
+          >
+            <option>Seminar – Undergraduate</option>
+            <option>Project – Undergraduate</option>
+            <option>Dissertation – Postgraduate</option>
+            <option>Thesis – Postgraduate</option>
+          </select>
+        </label>
+
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Proposed Title"
+          className="w-full p-2 border rounded"
+          required
+        />
+
+        <textarea
+          value={background}
+          onChange={(e) => setBackground(e.target.value)}
+          placeholder="Background"
+          className="w-full p-2 border rounded"
+          required
+        />
+        <textarea value={aim} onChange={(e) => setAim(e.target.value)} placeholder="Aim" className="w-full p-2 border rounded" required />
+        <textarea
+          value={objectives}
+          onChange={(e) => setObjectives(e.target.value)}
+          placeholder="Objectives"
+          className="w-full p-2 border rounded"
+          required
+        />
+        <textarea value={methods} onChange={(e) => setMethods(e.target.value)} placeholder="Methods" className="w-full p-2 border rounded" required />
+        <textarea
+          value={expectedResults}
+          onChange={(e) => setExpectedResults(e.target.value)}
+          placeholder="Expected Results"
+          className="w-full p-2 border rounded"
+          required
+        />
+        <textarea
+          value={literatureReview}
+          onChange={(e) => setLiteratureReview(e.target.value)}
+          placeholder="Literature Review (150–300 words)"
+          className="w-full p-2 border rounded h-32"
+          required
+        />
+
+        <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+          {editingId ? "Update Proposal" : "Submit Proposal"}
+        </button>
+      </form>
+    </main>
+
+    {/* Table */}
+    <section className="max-w-5xl mx-auto mt-8 bg-white rounded shadow p-6">
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">My Submitted Proposals</h3>
+      {submissions.length === 0 ? (
+        <p className="text-gray-500 text-sm">No proposals submitted yet.</p>
+      ) : (
+        <table className="w-full text-sm border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100 text-left text-gray-700">
+              <th className="p-2 border">Type</th>
+              <th className="p-2 border">Title</th>
+              <th className="p-2 border text-center">Similarity</th>
+              <th className="p-2 border text-center">Status</th>
+              <th className="p-2 border text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {submissions.map((item) => (
+              <tr key={item.id} className="hover:bg-blue-50 transition">
+                <td className="p-2 border">{item.proposal_type}</td>
+                <td className="p-2 border">{item.proposed_title}</td>
+                <td className="p-2 border text-center">
+                  <SimilarityMeter value={item.similarity_score || 0} />
+                </td>
+                <td className="p-2 border text-center">{statusBadge(item.final_decision || "pending")}</td>
+                <td className="p-2 border text-center space-x-3">
+                  <button onClick={() => handleView(item)} className="text-green-600 hover:underline">
+                    View
+                  </button>
+                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:underline">
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      // open PDF — use item (not selectedSubmission) so it opens for this row
+                      window.open(`${API_URL}/submission/${item.id}/pdf?token=${localStorage.getItem("token")}`, "_blank");
+                    }}
+                    className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
+                  >
+                    Download PDF
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+
+    {/* Proposal View Modal */}
+    {showModal && selectedSubmission && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-3xl w-full relative overflow-y-auto max-h-[85vh]">
+          <button onClick={() => setShowModal(false)} className="absolute top-2 right-3 text-gray-600 hover:text-black">
+            ✕
+          </button>
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">{selectedSubmission.proposed_title}</h3>
+
+          <div className="space-y-4 text-sm text-gray-700">
+            {[
+              ["Background", selectedSubmission.background],
+              ["Aim", selectedSubmission.aim],
+              ["Objectives", selectedSubmission.objectives],
+              ["Methods", selectedSubmission.methods],
+              ["Expected Results", selectedSubmission.expected_results],
+              ["Literature Review", selectedSubmission.literature_review],
+            ].map(([label, content]) => (
+              <div key={label}>
+                <h4 className="font-semibold text-blue-700 mb-1">{label}</h4>
+                <div className="bg-gray-50 border rounded p-2">{highlightText(content || "", selectedSubmission.similarity_score || 0)}</div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-    </div>  {/* closing for entire dashboard */}
-  );
+    {/* Password Change Modal */}
+    {showPasswordModal && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowPasswordModal(false);
+        }}
+      >
+        <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+          <button onClick={() => setShowPasswordModal(false)} className="absolute top-2 right-3 text-gray-500 hover:text-black">
+            ✕
+          </button>
+
+          <ChangePassword API_URL={API_URL} token={token} />
+        </div>
+      </div>
+    )}
+  </div>
+);
