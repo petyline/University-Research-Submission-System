@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from passlib.hash import pbkdf2_sha256
+from passlib.hash import pbkdf2_sha256, bcrypt
 from database import get_db
 from models import User, RoleEnum
 from auth_jwt import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from passlib.hash import pbkdf2_sha256, bcrypt
+from passlib.context import CryptContext
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # -------------------------------
 # Pydantic model for signup input
 # -------------------------------
@@ -172,4 +172,43 @@ def list_users(
         })
 
     return result
+
+
+
+@router.put("/auth/change_password")
+def change_password(
+    old_password: str = Body(..., embed=True),
+    new_password: str = Body(..., embed=True),
+    confirm_password: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Allows any authenticated user (student, lecturer, or admin) to change their password.
+    """
+
+    # Validate new password confirmation
+    if new_password != confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password and confirmation do not match.",
+        )
+
+    # Fetch user from DB
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Verify old password
+    if not pwd_context.verify(old_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Old password is incorrect.",
+        )
+
+    # Hash and save new password
+    user.hashed_password = pwd_context.hash(new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully."}
 
