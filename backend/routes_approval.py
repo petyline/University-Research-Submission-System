@@ -203,24 +203,26 @@ def update_settings(
 
 @router.get("/student_supervisor/{student_id}")
 def get_student_supervisor(student_id: int, db: Session = Depends(get_db)):
+    # Fetch student
     student = db.query(User).filter(User.id == student_id, User.role == "student").first()
-
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # supervisors is a relationship list
+    # Check assignments
     if not student.supervisors or len(student.supervisors) == 0:
-        return None
+        return {"assigned": False}
 
-    # Take the first supervisor
+    # You can allow multiple supervisors; take first for now
     sup = student.supervisors[0]
 
     return {
+        "assigned": True,
         "name": sup.name,
         "email": sup.email,
-        "department": sup.department if hasattr(sup, "department") else "N/A",
+        "department": getattr(sup, "department", "N/A"),
         "id": sup.id
     }
+
 
 
 
