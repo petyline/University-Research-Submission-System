@@ -19,6 +19,7 @@ export default function StudentPanel({ user, setUser }) {
   const [activeTab, setActiveTab] = useState("submissions"); // add 'password' as possible tab later
   const [showMenu, setShowMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [supervisor, setSupervisor] = useState(null);
 
 
 
@@ -36,6 +37,24 @@ export default function StudentPanel({ user, setUser }) {
   };
 
   useEffect(() => {
+    // Fetch Supervisor
+    const fetchSupervisor = async () => {
+      try {
+        const res = await fetch(`${API_URL}/student_supervisor/${student_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+    
+        if (res.ok) {
+          const data = await res.json();
+          setSupervisor(data);   // expected: {name, email, department}
+        } else {
+          setSupervisor(null);
+        }
+      } catch (err) {
+        console.error("Supervisor fetch error:", err);
+      }
+    };
+
     const fetchSubmissions = async () => {
       try {
         const res = await fetch(`${API_URL}/student_submissions/${student_id}`, {
@@ -48,7 +67,7 @@ export default function StudentPanel({ user, setUser }) {
         console.error("Fetch error:", err);
       }
     };
-    if (student_id) fetchSubmissions();
+    if (student_id) fetchSubmissions(); fetchSupervisor();
   }, [student_id, API_URL, token]);
 
   const handleSubmit = async (e) => {
