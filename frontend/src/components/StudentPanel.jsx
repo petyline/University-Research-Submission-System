@@ -250,6 +250,12 @@ return (
                 Change Password
               </button>
               <button
+                onClick={() => navigate("/forgot-password")}
+                className="block w-full text-left px-4 py-2 text-blue-600 hover:bg-gray-100"
+              >
+                Forgot Password
+              </button>
+              <button
                 onClick={handleLogout}
                 className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
               >
