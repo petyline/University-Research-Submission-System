@@ -201,5 +201,26 @@ def update_settings(
         "allow_multiple_submissions": s.allow_multiple_submissions
     }
 
+@router.get("/student_supervisor/{student_id}")
+def get_student_supervisor(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(User).filter(User.id == student_id, User.role == "student").first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # supervisors is a relationship list
+    if not student.supervisors or len(student.supervisors) == 0:
+        return None
+
+    # Take the first supervisor
+    sup = student.supervisors[0]
+
+    return {
+        "name": sup.name,
+        "email": sup.email,
+        "department": sup.department if hasattr(sup, "department") else "N/A",
+        "id": sup.id
+    }
+
 
 
