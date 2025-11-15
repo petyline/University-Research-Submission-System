@@ -277,6 +277,28 @@ return (
         </button>
       </div>
     </header>
+    {/* Supervisor Info Panel */}
+    <section className="max-w-3xl mx-auto mt-6 p-4 bg-white rounded-lg shadow border">
+      <h2 className="text-lg font-semibold text-blue-700 mb-2">Assigned Supervisor</h2>
+    
+      {supervisor ? (
+        <div className="space-y-1 text-gray-700">
+          <p><strong>Name:</strong> {supervisor.name}</p>
+          <p><strong>Email:</strong> {supervisor.email}</p>
+          <p><strong>Department:</strong> {supervisor.department}</p>
+          <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs rounded">
+            Assigned
+          </span>
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">
+          No supervisor assigned yet.
+          <span className="ml-2 inline-block px-3 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
+            Pending Assignment
+          </span>
+        </div>
+      )}
+    </section>
 
     {/* Form */}
     <main className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
