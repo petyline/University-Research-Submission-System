@@ -212,3 +212,41 @@ def change_password(
 
     return {"message": "Password changed successfully."}
 
+from utils_email import send_email
+import uuid
+
+def forgot_password(request, db):
+    email = request.email
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"message": "If this email exists, a password reset link has been sent."}
+
+    # Generate token
+    token = str(uuid.uuid4())
+    user.reset_token = token
+    db.commit()
+
+    # Generate link
+    reset_link = f"https://university-research-submission-system-1.onrender.com/reset-password/{token}"
+
+    subject = "Password Reset Request"
+
+    body_html = f"""
+    <p>Hello {user.full_name},</p>
+
+    <p>You requested to reset your password for the University Research Submission System.</p>
+
+    <p><a href="{reset_link}" 
+        style="padding:10px 20px;background:#0275d8;color:white;text-decoration:none;border-radius:6px;">
+        Reset Your Password
+    </a></p>
+
+    <p>If you did not request this, you may ignore this email.</p>
+
+    <p>Regards,<br>University Research Submission System</p>
+    """
+
+    send_email(email, subject, body_html)
+
+    return {"message": "Password reset link sent if the email exists."}
