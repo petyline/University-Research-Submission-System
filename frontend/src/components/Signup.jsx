@@ -84,11 +84,23 @@ export default function Signup() {
 
         <input
           value={regNumber}
-          onChange={(e) => setRegNumber(e.target.value)}
-          placeholder={role === 'student' ? 'Registration Number' : 'Staff Number'}
+          onChange={(e) => {
+            let v = e.target.value;
+        
+            if (role === "student") {
+              // Only allow digits
+              v = v.replace(/\D/g, "");
+              // Limit length to 6
+              if (v.length > 6) v = v.slice(0, 6);
+            }
+            setRegNumber(v);
+          }}
+          placeholder={role === "student" ? "6-Digit Registration Number" : "Staff Number"}
           className="w-full p-2 border"
+          maxLength={role === "student" ? 6 : 20}
           required
         />
+
 
         <button className="w-full bg-blue-600 text-white py-2 rounded">
           Sign Up
