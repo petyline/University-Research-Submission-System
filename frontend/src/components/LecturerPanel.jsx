@@ -115,20 +115,73 @@ export default function LecturerPanel({ user, setUser }) {
                     <SimilarityMeter score={s.similarity_score} />
                   </td>
                   <td className="p-2 border text-center">{s.final_decision || '-'}</td>
-                  <td className="p-2 border text-center">
-                    <button
-                      className="bg-blue-500 text-white px-3 py-1 rounded"
-                      onClick={() => openModal(s)}
-                    >
-                      View Proposal
-                    </button>
-                  </td>
+                  <td className="p-2 border text-center flex gap-2 justify-center">
+					  <button
+					    className="bg-blue-500 text-white px-3 py-1 rounded"
+					    onClick={() => openModal(s)}
+					  >
+					    View
+					  </button>
+					
+					  {s.final_decision === "pending" && (
+					    <button
+					      className="bg-yellow-500 text-white px-3 py-1 rounded"
+					      onClick={() => {
+					        setSelectedSub(s);
+					        setDecisionModal(true);
+					      }}
+					    >
+					      Decide
+					    </button>
+					  )}
+					</td>
+
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </main>
+
+	  {/* Approve/Reject Modal */}
+		{decisionModal && selectedSub && (
+		  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+		    <div className="bg-white p-6 rounded-lg w-96 relative">
+		      <button
+		        className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+		        onClick={() => setDecisionModal(false)}
+		      >
+		        ✕
+		      </button>
+		
+		      <h3 className="text-lg font-semibold mb-3 text-gray-800">
+		        Decide Proposal
+		      </h3>
+		
+		      <p className="mb-3 text-gray-700">
+		        Approve or Reject this submission:
+		        <br />
+		        <b>{selectedSub.proposed_title}</b>
+		      </p>
+		
+		      <div className="flex gap-3 mt-4">
+		        <button
+		          className="bg-green-500 text-white px-3 py-1 rounded w-full"
+		          onClick={() => decide(selectedSub.id, "approved")}
+		        >
+		          Approve
+		        </button>
+		
+		        <button
+		          className="bg-red-500 text-white px-3 py-1 rounded w-full"
+		          onClick={() => decide(selectedSub.id, "rejected")}
+		        >
+		          Reject
+		        </button>
+		      </div>
+		    </div>
+		  </div>
+		)}
 
       {/* Modal with Highlights */}
       {modalOpen && selectedSub && (
