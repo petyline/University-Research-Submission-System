@@ -17,6 +17,13 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (role === "student") {
+      if (!/^\d{6}$/.test(regNumber)) {
+        setError("Registration number must be exactly 6 digits.");
+        return;
+      }
+    }
+
     setError(null);
 
     try {
