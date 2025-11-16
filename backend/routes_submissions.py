@@ -306,21 +306,31 @@ def get_all_submissions(
             "id": s.id,
             "proposal_type": s.proposal_type.value,
             "proposed_title": s.proposed_title,
+            "background": s.background,
+            "aim": s.aim,
+            "objectives": s.objectives,
+            "methods": s.methods,
+            "expected_results": s.expected_results,
+            "literature_review": s.literature_review,
             "similarity_score": float(s.similarity_score or 0),
+        
             "student": {
                 "id": s.student.id,
                 "name": s.student.name,
                 "email": s.student.email,
-                "reg_number": s.student.reg_number,
+                "reg_number": s.student.reg_number
             } if s.student else None,
+        
             "supervisor": {
                 "id": s.supervisor.id,
                 "name": s.supervisor.name,
-                "email": s.supervisor.email,
+                "email": s.supervisor.email
             } if s.supervisor else None,
+        
             "lecturer_decision": s.lecturer_decision,
             "final_decision": s.final_decision,
             "created_at": s.created_at
         })
+
 
     return result
