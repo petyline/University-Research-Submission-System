@@ -42,7 +42,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(Enum(RoleEnum), nullable=False)
-    reg_number = Column(String, nullable=True)
+    reg_number = Column(String(6), unique=True, index=True, nullable=True)
     is_approved = Column(Boolean, default=False)
 
     supervisors = relationship(
