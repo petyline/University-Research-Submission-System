@@ -31,9 +31,25 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     if payload.role not in RoleEnum.__members__:
         raise HTTPException(status_code=400, detail="Invalid role selected.")
 
+    # Email uniqueness check
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # 🔥 Student Reg Number Rules
+    if payload.role == "student":
+
+        if not payload.reg_number:
+            raise HTTPException(status_code=400, detail="Registration number is required for students")
+
+        # must be exactly 6 digits
+        if not payload.reg_number.isdigit() or len(payload.reg_number) != 6:
+            raise HTTPException(status_code=400, detail="Registration number must be EXACTLY 6 digits")
+
+        # must not already exist
+        if db.query(User).filter(User.reg_number == payload.reg_number).first():
+            raise HTTPException(status_code=400, detail="A student with this registration number already exists")
+
+    # Hash password
     hashed_password = pbkdf2_sha256.hash(payload.password)
 
     user = User(
@@ -42,7 +58,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         password_hash=hashed_password,
         role=payload.role,
         reg_number=payload.reg_number,
-        is_approved=False  # Must be approved by admin first
+        is_approved=False
     )
 
     db.add(user)
@@ -53,6 +69,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         "message": "Signup successful. Await admin approval.",
         "user_id": user.id
     }
+
 
 # -------------------------------
 # LOGIN - Requires Approval
