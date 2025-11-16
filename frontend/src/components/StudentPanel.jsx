@@ -134,6 +134,7 @@ export default function StudentPanel({ user, setUser }) {
 
   const handleEdit = (item) => {
     setEditingId(item.id);
+    setFormOpen(true);
     // map backend enum back to label (display only)
     const label =
       item.proposal_type === "Seminar" ? "Seminar – Undergraduate" :
