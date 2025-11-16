@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 export default function LecturerPanel({ user, setUser }) {
   const [subs, setSubs] = useState([]);
   const [selectedSub, setSelectedSub] = useState(null);
+  const [decisionModal, setDecisionModal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
