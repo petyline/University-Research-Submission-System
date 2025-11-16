@@ -20,7 +20,7 @@ export default function StudentPanel({ user, setUser }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [supervisor, setSupervisor] = useState(null);
-
+  const [formOpen, setFormOpen] = useState(false);
 
 
   const navigate = useNavigate();
@@ -307,45 +307,58 @@ return (
     </section>
 
     {/* Form */}
+    {/* Collapsible Submission Form */}
     <main className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-10">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">
-        {editingId ? "Edit Proposal" : "Submit New Proposal"}
-      </h2>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <label className="block">
-          Proposal Type
-          <select
-            value={proposalType}
-            onChange={(e) => setProposalType(e.target.value)}
-            className="w-full p-2 border rounded mt-1"
-          >
-            <option>Seminar – Undergraduate</option>
-            <option>Project – Undergraduate</option>
-            <option>Dissertation – Postgraduate</option>
-            <option>Thesis – Postgraduate</option>
-          </select>
-        </label>
-
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Proposed Title"
-          className="w-full p-2 border rounded"
-          required
-        />
-
-        <textarea value={background} onChange={(e) => setBackground(e.target.value)} placeholder="Background" className="w-full p-2 border rounded" required />
-        <textarea value={aim} onChange={(e) => setAim(e.target.value)} placeholder="Aim" className="w-full p-2 border rounded" required />
-        <textarea value={objectives} onChange={(e) => setObjectives(e.target.value)} placeholder="Objectives" className="w-full p-2 border rounded" required />
-        <textarea value={methods} onChange={(e) => setMethods(e.target.value)} placeholder="Methods" className="w-full p-2 border rounded" required />
-        <textarea value={expectedResults} onChange={(e) => setExpectedResults(e.target.value)} placeholder="Expected Results" className="w-full p-2 border rounded" required />
-        <textarea value={literatureReview} onChange={(e) => setLiteratureReview(e.target.value)} placeholder="Literature Review (150–300 words)" className="w-full p-2 border rounded h-32" required />
-
-        <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-          {editingId ? "Update Proposal" : "Submit Proposal"}
-        </button>
-      </form>
+    
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setFormOpen(!formOpen)}
+        className="w-full flex justify-between items-center px-4 py-3 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition font-semibold"
+      >
+        <span>{editingId ? "Edit Proposal" : "Submit New Proposal"}</span>
+        <span className="text-xl">{formOpen ? "−" : "+"}</span>
+      </button>
+    
+      {/* Collapsible Content */}
+      {formOpen && (
+        <div className="mt-4 transition-all duration-300 ease-in-out">
+          <form onSubmit={handleSubmit} className="space-y-3">
+    
+            <label className="block">
+              Proposal Type
+              <select
+                value={proposalType}
+                onChange={(e) => setProposalType(e.target.value)}
+                className="w-full p-2 border rounded mt-1"
+              >
+                <option>Seminar – Undergraduate</option>
+                <option>Project – Undergraduate</option>
+                <option>Dissertation – Postgraduate</option>
+                <option>Thesis – Postgraduate</option>
+              </select>
+            </label>
+    
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Proposed Title"
+              className="w-full p-2 border rounded"
+              required
+            />
+    
+            <textarea value={background} onChange={(e) => setBackground(e.target.value)} placeholder="Background" className="w-full p-2 border rounded" required />
+            <textarea value={aim} onChange={(e) => setAim(e.target.value)} placeholder="Aim" className="w-full p-2 border rounded" required />
+            <textarea value={objectives} onChange={(e) => setObjectives(e.target.value)} placeholder="Objectives" className="w-full p-2 border rounded" required />
+            <textarea value={methods} onChange={(e) => setMethods(e.target.value)} placeholder="Methods" className="w-full p-2 border rounded" required />
+            <textarea value={expectedResults} onChange={(e) => setExpectedResults(e.target.value)} placeholder="Expected Results" className="w-full p-2 border rounded" required />
+            <textarea value={literatureReview} onChange={(e) => setLiteratureReview(e.target.value)} placeholder="Literature Review (150–300 words)" className="w-full p-2 border rounded h-32" required />
+    
+            <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+              {editingId ? "Update Proposal" : "Submit Proposal"}
+            </button>
+          </form>
+        </div>
+      )}
     </main>
 
     {/* Submissions Table */}
