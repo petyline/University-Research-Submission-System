@@ -13,9 +13,9 @@ from utils_pdf import generate_pdf
 
 router = APIRouter()
 
-# -------------------------
-# PDF DOWNLOAD
-# -------------------------
+# ============================================================
+#   PDF DOWNLOAD
+# ============================================================
 @router.get("/submission/{submission_id}/pdf")
 def get_submission_pdf(
     submission_id: int,
@@ -26,7 +26,7 @@ def get_submission_pdf(
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
 
-    # role-based access
+    # Role checks
     if current_user.role == "student" and sub.student_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -41,22 +41,25 @@ def get_submission_pdf(
         headers={"Content-Disposition": f"attachment; filename=submission_{submission_id}.pdf"}
     )
 
-# -------------------------
-# HELPERS
-# -------------------------
+
+# ============================================================
+#   HELPERS
+# ============================================================
 def get_degree_level(ptype: ProposalTypeEnum) -> str:
     if ptype in (ProposalTypeEnum.Seminar, ProposalTypeEnum.Project):
         return "undergrad"
     return "postgrad"
+
 
 def build_text_for_mode(mode: str, title: str, parts: list[str]):
     if mode == "title":
         return title or ""
     return " ".join(filter(None, [title] + parts))
 
-# -------------------------
-# PAYLOAD MODELS
-# -------------------------
+
+# ============================================================
+#   PAYLOAD MODELS
+# ============================================================
 class ProposalSubmission(BaseModel):
     student_id: int
     proposal_type: ProposalTypeEnum
@@ -68,6 +71,7 @@ class ProposalSubmission(BaseModel):
     expected_results: str
     literature_review: str
 
+
 class ProposalUpdate(BaseModel):
     proposal_type: ProposalTypeEnum | None = None
     proposed_title: str | None = None
@@ -78,13 +82,18 @@ class ProposalUpdate(BaseModel):
     expected_results: str | None = None
     literature_review: str | None = None
 
+
 # ============================================================
-#  SUBMIT PROPOSAL
+#   SUBMIT PROPOSAL
 # ============================================================
 @router.post("/submit")
 def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
 
-    student = db.query(User).filter(User.id == payload.student_id, User.role == "student").first()
+    student = (
+        db.query(User)
+        .filter(User.id == payload.student_id, User.role == "student")
+        .first()
+    )
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
@@ -99,7 +108,7 @@ def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
     postgrad_mode = settings.postgrad_mode if settings else "title_plus"
     allow_multiple = settings.allow_multiple_submissions if settings else False
 
-    # ENFORCE ONE SUBMISSION PER TYPE (Seminar / Project / Thesis / Dissertation)
+    # ENFORCE ONE SUBMISSION PER TYPE
     if not allow_multiple:
         existing_same_type = db.query(Submission).filter(
             Submission.student_id == student.id,
@@ -124,7 +133,10 @@ def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
 
     existing_texts = []
     for e in existing:
-        parts = [e.background, e.aim, e.objectives, e.methods, e.expected_results, e.literature_review]
+        parts = [
+            e.background, e.aim, e.objectives, e.methods,
+            e.expected_results, e.literature_review
+        ]
         existing_texts.append(build_text_for_mode(mode, e.proposed_title, parts))
 
     new_parts = [
@@ -199,29 +211,28 @@ def update_submission(
         if not student or current_user not in student.supervisors:
             raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Duplicate prevention on update
-    if payload.proposal_type:
-        settings = db.query(Settings).first()
-        allow_multiple = settings.allow_multiple_submissions if settings else False
+    # Prevent duplicate type on change
+    settings = db.query(Settings).first()
+    allow_multiple = settings.allow_multiple_submissions if settings else False
 
-        if not allow_multiple:
-            duplicate = db.query(Submission).filter(
-                Submission.student_id == sub.student_id,
-                Submission.proposal_type == payload.proposal_type,
-                Submission.id != sub.id
-            ).first()
-            if duplicate:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"You already have a {payload.proposal_type} submission. Cannot change type."
-                )
+    if payload.proposal_type and not allow_multiple:
+        duplicate = db.query(Submission).filter(
+            Submission.student_id == sub.student_id,
+            Submission.proposal_type == payload.proposal_type,
+            Submission.id != sub.id
+        ).first()
+
+        if duplicate:
+            raise HTTPException(
+                status_code=400,
+                detail=f"You already have a {payload.proposal_type} submission. Cannot change type."
+            )
 
     # Apply updates
     for field, value in payload.dict(exclude_unset=True).items():
         setattr(sub, field, value)
 
     # Recompute similarity
-    settings = db.query(Settings).first()
     undergrad_mode = settings.undergrad_mode if settings else "title"
     postgrad_mode = settings.postgrad_mode if settings else "title_plus"
 
@@ -235,12 +246,15 @@ def update_submission(
 
     existing_texts = []
     for e in existing:
-        parts = [e.background, e.aim, e.objectives, e.methods, e.expected_results, e.literature_review]
+        parts = [
+            e.background, e.aim, e.objectives, e.methods,
+            e.expected_results, e.literature_review
+        ]
         existing_texts.append(build_text_for_mode(mode, e.proposed_title, parts))
 
     new_parts = [
-        sub.background, sub.aim, sub.objectives,
-        sub.methods, sub.expected_results, sub.literature_review
+        sub.background, sub.aim, sub.objectives, sub.methods,
+        sub.expected_results, sub.literature_review
     ]
     new_text = build_text_for_mode(mode, sub.proposed_title, new_parts)
 
@@ -257,7 +271,7 @@ def update_submission(
 
 
 # ============================================================
-#   LIST STUDENT SUBMISSIONS
+#   VIEW STUDENT SUBMISSIONS
 # ============================================================
 @router.get("/student_submissions/{student_id}")
 def get_student_submissions(
@@ -306,31 +320,33 @@ def get_all_submissions(
             "id": s.id,
             "proposal_type": s.proposal_type.value,
             "proposed_title": s.proposed_title,
+
+            # RETURN ALL FIELDS NEEDED IN LECTURER PANEL
             "background": s.background,
             "aim": s.aim,
             "objectives": s.objectives,
             "methods": s.methods,
             "expected_results": s.expected_results,
             "literature_review": s.literature_review,
+
             "similarity_score": float(s.similarity_score or 0),
-        
+
             "student": {
                 "id": s.student.id,
                 "name": s.student.name,
                 "email": s.student.email,
                 "reg_number": s.student.reg_number
             } if s.student else None,
-        
+
             "supervisor": {
                 "id": s.supervisor.id,
                 "name": s.supervisor.name,
                 "email": s.supervisor.email
             } if s.supervisor else None,
-        
+
             "lecturer_decision": s.lecturer_decision,
             "final_decision": s.final_decision,
             "created_at": s.created_at
         })
-
 
     return result
