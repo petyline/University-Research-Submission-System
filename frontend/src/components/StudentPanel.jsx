@@ -2,6 +2,7 @@
 import ChangePassword from "./ChangePassword";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function StudentPanel({ user, setUser }) {
   const [proposalType, setProposalType] = useState("Seminar – Undergraduate");
@@ -16,12 +17,11 @@ export default function StudentPanel({ user, setUser }) {
   const [editingId, setEditingId] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("submissions"); // add 'password' as possible tab later
+  const [activeTab, setActiveTab] = useState("submissions");
   const [showMenu, setShowMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [supervisor, setSupervisor] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
-
 
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -37,21 +37,20 @@ export default function StudentPanel({ user, setUser }) {
   };
 
   useEffect(() => {
-    // Fetch Supervisor
     const fetchSupervisor = async () => {
       try {
         const res = await fetch(`${API_URL}/student_supervisor/${student_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-    
+
         if (res.ok) {
           const data = await res.json();
-          setSupervisor(data);   // expected: {name, email, department}
+          setSupervisor(data);
         } else {
           setSupervisor(null);
         }
       } catch (err) {
-        console.error("Supervisor fetch error:", err);
+        toast.error("Failed to load supervisor");
       }
     };
 
@@ -60,22 +59,27 @@ export default function StudentPanel({ user, setUser }) {
         const res = await fetch(`${API_URL}/student_submissions/${student_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!res.ok) throw new Error("Failed to fetch proposals");
         const data = await res.json();
         setSubmissions(data);
       } catch (err) {
-        console.error("Fetch error:", err);
+        toast.error("Failed to load submissions");
       }
     };
-    if (student_id) fetchSubmissions(); fetchSupervisor();
+
+    if (student_id) {
+      fetchSubmissions();
+      fetchSupervisor();
+    }
   }, [student_id, API_URL, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const required = [title, background, aim, objectives, methods, expectedResults, literatureReview];
-    if (required.some((v) => !v || !v.trim())) {
-      alert("❌ Please fill in all fields.");
+    if (required.some((v) => !v.trim())) {
+      toast.error("Please fill in all fields");
       return;
     }
 
@@ -92,7 +96,10 @@ export default function StudentPanel({ user, setUser }) {
     };
 
     try {
-      const endpoint = editingId ? `${API_URL}/update_submission/${editingId}` : `${API_URL}/submit`;
+      const endpoint = editingId
+        ? `${API_URL}/update_submission/${editingId}`
+        : `${API_URL}/submit`;
+
       const method = editingId ? "PUT" : "POST";
 
       const res = await fetch(endpoint, {
@@ -106,41 +113,51 @@ export default function StudentPanel({ user, setUser }) {
       });
 
       if (!res.ok) {
-        const t = await res.text();
-        console.error("Backend response:", t);
-        alert("❌ Submission failed — check console.");
+        const msg = await res.text();
+        toast.error(`Submission failed: ${msg}`);
         return;
       }
 
       const data = await res.json();
-      alert(
+
+      toast.success(
         editingId
-          ? "✅ Proposal updated successfully!"
-          : `✅ Submitted successfully! Similarity: ${data.similarity_score || data.similarity}%`
+          ? "Proposal updated successfully!"
+          : `Submitted! Similarity: ${data.similarity_score || data.similarity}%`
       );
 
       setEditingId(null);
-      setTitle(""); setBackground(""); setAim(""); setObjectives(""); setMethods(""); setExpectedResults(""); setLiteratureReview("");
+      setTitle("");
+      setBackground("");
+      setAim("");
+      setObjectives("");
+      setMethods("");
+      setExpectedResults("");
+      setLiteratureReview("");
 
       const refreshed = await fetch(`${API_URL}/student_submissions/${student_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (refreshed.ok) setSubmissions(await refreshed.json());
     } catch (err) {
-      console.error("Submit error:", err);
-      alert("❌ Failed to connect to backend.");
+      toast.error("Failed to connect to backend");
     }
   };
 
   const handleEdit = (item) => {
     setEditingId(item.id);
     setFormOpen(true);
-    // map backend enum back to label (display only)
+
     const label =
-      item.proposal_type === "Seminar" ? "Seminar – Undergraduate" :
-      item.proposal_type === "Project" ? "Project – Undergraduate" :
-      item.proposal_type === "Dissertation" ? "Dissertation – Postgraduate" :
-      "Thesis – Postgraduate";
+      item.proposal_type === "Seminar"
+        ? "Seminar – Undergraduate"
+        : item.proposal_type === "Project"
+        ? "Project – Undergraduate"
+        : item.proposal_type === "Dissertation"
+        ? "Dissertation – Postgraduate"
+        : "Thesis – Postgraduate";
+
     setProposalType(label);
     setTitle(item.proposed_title);
     setBackground(item.background || "");
@@ -163,13 +180,15 @@ export default function StudentPanel({ user, setUser }) {
     navigate("/", { replace: true });
   };
 
-  // Same proportional sentence-highlighting as LecturerPanel
   const highlightText = (text, score) => {
-    if (!text) return '';
+    if (!text) return "";
     const sentences = text.split(/(?<=[.!?])/);
     const highlightCount = Math.ceil(((score || 0) / 100) * sentences.length);
     return sentences.map((s, idx) => (
-      <span key={idx} style={{ backgroundColor: idx < highlightCount ? '#fde2e2' : 'transparent' }}>
+      <span
+        key={idx}
+        style={{ backgroundColor: idx < highlightCount ? "#fde2e2" : "transparent" }}
+      >
         {s}{" "}
       </span>
     ));
@@ -178,30 +197,38 @@ export default function StudentPanel({ user, setUser }) {
   const statusBadge = (status) => {
     const s = (status || "pending").toLowerCase();
     const cls =
-      s.includes("approved") ? "bg-green-100 text-green-800" :
-      s.includes("rejected") ? "bg-red-100 text-red-800" :
-      "bg-yellow-100 text-yellow-800";
-    const label =
-      s === "approved" ? "Approved" :
-      s === "rejected" ? "Rejected" :
-      "Pending Review";
-    return <span className={`px-2 py-1 text-xs font-semibold rounded ${cls}`}>{label}</span>;
+      s.includes("approved")
+        ? "bg-green-100 text-green-800"
+        : s.includes("rejected")
+        ? "bg-red-100 text-red-800"
+        : "bg-yellow-100 text-yellow-800";
+
+    return (
+      <span className={`px-2 py-1 text-xs font-semibold rounded ${cls}`}>
+        {s === "approved" ? "Approved" : s === "rejected" ? "Rejected" : "Pending Review"}
+      </span>
+    );
   };
 
   const SimilarityMeter = ({ value }) => {
     const percent = Math.max(0, Math.min(100, value || 0));
     const color =
-      percent >= 75 ? "stroke-red-500" :
-      percent >= 50 ? "stroke-yellow-500" :
-      "stroke-green-500";
+      percent >= 75
+        ? "stroke-red-500"
+        : percent >= 50
+        ? "stroke-yellow-500"
+        : "stroke-green-500";
     return (
       <div className="relative w-12 h-12">
         <svg className="w-full h-full transform -rotate-90">
           <circle cx="24" cy="24" r="20" className="stroke-gray-200" strokeWidth="4" fill="none" />
           <circle
-            cx="24" cy="24" r="20"
+            cx="24"
+            cy="24"
+            r="20"
             className={`${color}`}
-            strokeWidth="4" fill="none"
+            strokeWidth="4"
+            fill="none"
             strokeDasharray={`${(percent / 100) * 125.6} 125.6`}
             strokeLinecap="round"
           />
