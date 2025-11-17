@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import CircularSimilarity from './CircularSimilarity'; // this is your round one
+import CircularSimilarity from './CircularSimilarity';
+import { toast } from "react-hot-toast";   // ⭐ ADDED
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('submissions'); // 'submissions' | 'pending' | 'users' | 'assign' | 'settings'
+  const [activeTab, setActiveTab] = useState('submissions');
   const [subs, setSubs] = useState([]);
   const [students, setStudents] = useState([]);
   const [lecturers, setLecturers] = useState([]);
@@ -11,7 +12,7 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('user'); // 'user' | 'submission'
+  const [modalType, setModalType] = useState('user');
   const [error, setError] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedLecturer, setSelectedLecturer] = useState(null);
@@ -27,8 +28,7 @@ export default function AdminDashboard() {
     else if (activeTab === 'assign') { fetchStudents(); fetchLecturers(); }
     else if (activeTab === 'settings') fetchSettings();
   }, [activeTab]);
-  
-  
+
   const fetchSettings = async () => {
     try {
       const res = await fetch(`${API_URL}/admin/settings`, { headers: { Authorization: `Bearer ${token}` }});
@@ -37,9 +37,10 @@ export default function AdminDashboard() {
       setSettings(data);
     } catch (e) {
       console.error("Error loading settings:", e);
-      alert("Failed to load settings");
+      toast.error("Failed to load settings");   // ⭐ ADDED
     }
   };
+
   const saveSettings = async () => {
     try {
       const res = await fetch(`${API_URL}/admin/settings`, {
@@ -51,15 +52,16 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           undergrad_mode: settings.undergrad_mode,
           postgrad_mode: settings.postgrad_mode,
-		  allow_multiple_submissions: settings.allow_multiple_submissions,
+          allow_multiple_submissions: settings.allow_multiple_submissions,
         })
       });
+
       if (!res.ok) throw new Error(await res.text());
-      await res.json();
-      alert("Settings saved");
+
+      toast.success("Settings saved");   // ⭐ ADDED
     } catch (e) {
       console.error("Save settings error:", e);
-      alert("Failed to save settings");
+      toast.error("Failed to save settings");   // ⭐ ADDED
     }
   };
 
@@ -73,6 +75,7 @@ export default function AdminDashboard() {
       setSubs(await res.json());
     } catch (err) {
       setError(err.message);
+      toast.error("Unable to load submissions");   // ⭐ ADDED
     }
   };
 
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
       setPendingUsers(await res.json());
     } catch (err) {
       setError(err.message);
+      toast.error("Failed to load pending users");   // ⭐ ADDED
     }
   };
 
@@ -97,6 +101,7 @@ export default function AdminDashboard() {
       setAllUsers(await res.json());
     } catch (err) {
       setError(err.message);
+      toast.error("Failed to load users");   // ⭐ ADDED
     }
   };
 
@@ -123,12 +128,18 @@ export default function AdminDashboard() {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) throw new Error(await res.text());
+
+      toast.success(approve ? "User approved" : "User rejected");   // ⭐ ADDED
+
       fetchPendingUsers();
       fetchAllUsers();
       setModalOpen(false);
+
     } catch (err) {
       setError(err.message);
+      toast.error("Operation failed: " + err.message);   // ⭐ ADDED
     }
   };
 
@@ -138,17 +149,23 @@ export default function AdminDashboard() {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) throw new Error(await res.text());
+
+      toast.success(decision === 'approve' ? "Submission approved" : "Submission rejected");   // ⭐ ADDED
+
       fetchSubs();
       setModalOpen(false);
+
     } catch (err) {
       setError(err.message);
+      toast.error("Failed to update submission");   // ⭐ ADDED
     }
   };
 
   const assignSupervisor = async () => {
     if (!selectedStudent || !selectedLecturer)
-      return alert("Select both student and supervisor");
+      return toast.error("Select both student and supervisor");   // ⭐ ADDED
 
     try {
       const res = await fetch(`${API_URL}/admin/assign_supervisor`, {
@@ -165,10 +182,12 @@ export default function AdminDashboard() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Failed to assign supervisor");
-      alert(data.message);
+
+      toast.success(data.message);   // ⭐ ADDED
+
       fetchStudents();
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error(err.message);   // ⭐ ADDED
     }
   };
 
