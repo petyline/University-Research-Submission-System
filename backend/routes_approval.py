@@ -223,6 +223,44 @@ def get_student_supervisor(student_id: int, db: Session = Depends(get_db)):
         "id": sup.id
     }
 
+@router.post("/lecturer/decision/{submission_id}")
+def lecturer_decide_submission(
+    submission_id: int,
+    decision: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 👉 Lecturer-only access
+    if current_user.role != "lecturer":
+        raise HTTPException(status_code=403, detail="Only lecturers can make decisions")
+
+    # Fetch submission
+    sub = db.query(Submission).filter(Submission.id == submission_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    # Ensure lecturer supervises the student
+    if sub.supervisor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not supervise this student")
+
+    # Validate decision
+    if decision not in ["approved", "rejected"]:
+        raise HTTPException(status_code=400, detail="Decision must be 'approved' or 'rejected'")
+
+    # Save decision
+    sub.lecturer_decision = decision
+    sub.final_decision = decision   # Lecturer’s decision becomes final immediately
+    sub.lecturer_decision_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(sub)
+
+    return {
+        "message": f"Submission {decision} successfully",
+        "id": sub.id,
+        "final_decision": sub.final_decision
+    }
+
 
 
 
