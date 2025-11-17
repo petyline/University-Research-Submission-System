@@ -30,20 +30,29 @@ export default function LecturerPanel({ user, setUser }) {
   useEffect(() => { fetchSubs(); }, []);
 
   const decide = async (id, decision) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/lecturer/decision/${id}?decision=${decision}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to send decision');
-      fetchSubs();
-      if (modalOpen) closeModal();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to submit decision. Check console.');
-    }
-  };
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/lecturer/decision/${id}?decision=${decision}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error('Failed to send decision');
+
+    // Refresh table
+    await fetchSubs();
+
+    // Close BOTH modals
+    setDecisionModal(false);
+    setModalOpen(false);
+    setSelectedSub(null);
+
+  } catch (err) {
+    console.error(err);
+    alert('Failed to submit decision. Check console.');
+  }
+};
+
 
   const openModal = (submission) => {
     setSelectedSub(submission);
