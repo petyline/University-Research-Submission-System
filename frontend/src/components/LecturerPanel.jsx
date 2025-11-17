@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SimilarityMeter from './SimilarityMeter';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export default function LecturerPanel({ user, setUser }) {
   const [subs, setSubs] = useState([]);
@@ -18,11 +19,12 @@ export default function LecturerPanel({ user, setUser }) {
       const res = await fetch(`${API_URL}/submissions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) throw new Error("Failed to fetch submissions");
       const data = await res.json();
       setSubs(data);
     } catch (err) {
-      console.error(err);
+      toast.error("Failed to fetch submissions");
       setError("Failed to fetch submissions");
     }
   };
@@ -30,29 +32,39 @@ export default function LecturerPanel({ user, setUser }) {
   useEffect(() => { fetchSubs(); }, []);
 
   const decide = async (id, decision) => {
-  try {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/lecturer/decision/${id}?decision=${decision}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const toastId = toast.loading("Processing...");
 
-    if (!res.ok) throw new Error('Failed to send decision');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/lecturer/decision/${id}?decision=${decision}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    // Refresh table
-    await fetchSubs();
+      if (!res.ok) {
+        const message = await res.text();
+        toast.error(`Error: ${message}`, { id: toastId });
+        return;
+      }
 
-    // Close BOTH modals
-    setDecisionModal(false);
-    setModalOpen(false);
-    setSelectedSub(null);
+      toast.success(
+        decision === "approved"
+          ? "Proposal approved successfully!"
+          : "Proposal rejected.",
+        { id: toastId }
+      );
 
-  } catch (err) {
-    console.error(err);
-    alert('Failed to submit decision. Check console.');
-  }
-};
+      await fetchSubs();
 
+      // Close all modals
+      setDecisionModal(false);
+      setModalOpen(false);
+      setSelectedSub(null);
+
+    } catch (err) {
+      toast.error("Network error — could not send decision", { id: toastId });
+    }
+  };
 
   const openModal = (submission) => {
     setSelectedSub(submission);
@@ -70,11 +82,12 @@ export default function LecturerPanel({ user, setUser }) {
     navigate('/', { replace: true });
   };
 
-  // Highlight function: splits text by sentences and highlights some proportion
+  // Highlighting sentences based on similarity
   const highlightText = (text, score) => {
     if (!text) return '';
-    const sentences = text.split(/(?<=[.!?])/); // split by punctuation
+    const sentences = text.split(/(?<=[.!?])/);
     const highlightCount = Math.ceil((score / 100) * sentences.length);
+
     return sentences.map((s, idx) => (
       <span key={idx} style={{ backgroundColor: idx < highlightCount ? '#fca5a5' : 'transparent' }}>
         {s}{" "}
@@ -84,6 +97,7 @@ export default function LecturerPanel({ user, setUser }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white shadow flex justify-between items-center px-6 py-3 border-b">
         <h1 className="text-lg font-bold text-blue-700">Lecturer Dashboard</h1>
@@ -116,6 +130,7 @@ export default function LecturerPanel({ user, setUser }) {
                 <th className="p-2 border text-center">Action</th>
               </tr>
             </thead>
+
             <tbody>
               {subs.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 border-b">
@@ -125,26 +140,27 @@ export default function LecturerPanel({ user, setUser }) {
                     <SimilarityMeter score={s.similarity_score} />
                   </td>
                   <td className="p-2 border text-center">{s.final_decision || '-'}</td>
+
                   <td className="p-2 border text-center flex gap-2 justify-center">
-					  <button
-					    className="bg-blue-500 text-white px-3 py-1 rounded"
-					    onClick={() => openModal(s)}
-					  >
-					    View
-					  </button>
-					
-					  {s.final_decision === "pending" && (
-					    <button
-					      className="bg-yellow-500 text-white px-3 py-1 rounded"
-					      onClick={() => {
-					        setSelectedSub(s);
-					        setDecisionModal(true);
-					      }}
-					    >
-					      Decide
-					    </button>
-					  )}
-					</td>
+                    <button
+                      className="bg-blue-500 text-white px-3 py-1 rounded"
+                      onClick={() => openModal(s)}
+                    >
+                      View
+                    </button>
+
+                    {s.final_decision === "pending" && (
+                      <button
+                        className="bg-yellow-500 text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          setSelectedSub(s);
+                          setDecisionModal(true);
+                        }}
+                      >
+                        Decide
+                      </button>
+                    )}
+                  </td>
 
                 </tr>
               ))}
@@ -153,47 +169,44 @@ export default function LecturerPanel({ user, setUser }) {
         )}
       </main>
 
-	  {/* Approve/Reject Modal */}
-		{decisionModal && selectedSub && (
-		  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-		    <div className="bg-white p-6 rounded-lg w-96 relative">
-		      <button
-		        className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-		        onClick={() => setDecisionModal(false)}
-		      >
-		        ✕
-		      </button>
-		
-		      <h3 className="text-lg font-semibold mb-3 text-gray-800">
-		        Decide Proposal
-		      </h3>
-		
-		      <p className="mb-3 text-gray-700">
-		        Approve or Reject this submission:
-		        <br />
-		        <b>{selectedSub.proposed_title}</b>
-		      </p>
-		
-		      <div className="flex gap-3 mt-4">
-		        <button
-		          className="bg-green-500 text-white px-3 py-1 rounded w-full"
-		          onClick={() => decide(selectedSub.id, "approved")}
-		        >
-		          Approve
-		        </button>
-		
-		        <button
-		          className="bg-red-500 text-white px-3 py-1 rounded w-full"
-		          onClick={() => decide(selectedSub.id, "rejected")}
-		        >
-		          Reject
-		        </button>
-		      </div>
-		    </div>
-		  </div>
-		)}
+      {/* Decision Modal */}
+      {decisionModal && selectedSub && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg w-96 relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+              onClick={() => setDecisionModal(false)}
+            >
+              ✕
+            </button>
 
-      {/* Modal with Highlights */}
+            <h3 className="text-lg font-semibold mb-3 text-gray-800">Decide Proposal</h3>
+            <p className="mb-3 text-gray-700">
+              Approve or Reject this submission:
+              <br />
+              <b>{selectedSub.proposed_title}</b>
+            </p>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                className="bg-green-500 text-white px-3 py-1 rounded w-full"
+                onClick={() => decide(selectedSub.id, "approved")}
+              >
+                Approve
+              </button>
+
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded w-full"
+                onClick={() => decide(selectedSub.id, "rejected")}
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
       {modalOpen && selectedSub && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-3xl w-full relative overflow-y-auto max-h-[90vh]">
@@ -203,45 +216,31 @@ export default function LecturerPanel({ user, setUser }) {
             >
               ✕
             </button>
+
             <h2 className="text-lg font-bold mb-4">{selectedSub.proposed_title}</h2>
+
             <p><b>Background:</b> {highlightText(selectedSub.background, selectedSub.similarity_score)}</p>
             <p><b>Aim:</b> {highlightText(selectedSub.aim, selectedSub.similarity_score)}</p>
             <p><b>Objectives:</b> {highlightText(selectedSub.objectives, selectedSub.similarity_score)}</p>
             <p><b>Methods:</b> {highlightText(selectedSub.methods, selectedSub.similarity_score)}</p>
             <p><b>Expected Results:</b> {highlightText(selectedSub.expected_results, selectedSub.similarity_score)}</p>
             <p><b>Literature Review:</b> {highlightText(selectedSub.literature_review, selectedSub.similarity_score)}</p>
-            <div className="mt-4 flex gap-2">
-              {selectedSub.final_decision ? (
-                <b>{selectedSub.final_decision}</b>
-              ) : (
-                <>
-                  <button
-                    className="bg-green-500 text-white px-3 py-1 rounded"
-                    onClick={() => decide(selectedSub.id, 'approved')}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                    onClick={() => decide(selectedSub.id, 'rejected')}
-                  >
-                    Reject
-                  </button>
-				  <button
-					  onClick={() =>
-						window.open(`${API_URL}/submission/${selectedSub.id}/pdf?token=${localStorage.getItem("token")}`, "_blank")
-					  }
-					  className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 ml-2"
-					>
-					  PDF
-					</button>
 
-                </>
-              )}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() =>
+                  window.open(`${API_URL}/submission/${selectedSub.id}/pdf?token=${localStorage.getItem("token")}`, "_blank")
+                }
+                className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 ml-2"
+              >
+                PDF
+              </button>
             </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }
