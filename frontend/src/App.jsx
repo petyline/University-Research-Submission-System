@@ -6,6 +6,9 @@ import StudentPanel from './components/StudentPanel';
 import LecturerPanel from './components/LecturerPanel';
 import AdminDashboard from './components/AdminDashboard';
 
+// 🔥 Toast imports
+import { Toaster } from "react-hot-toast";
+
 export default function App() {
   const [user, setUser] = useState(null);
 
@@ -31,6 +34,10 @@ export default function App() {
 
   return (
     <Router>
+
+      {/* 🔥 Global toast handler */}
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+
       <Routes>
         {/* Default route: show login if not logged in */}
         <Route
@@ -45,10 +52,7 @@ export default function App() {
         />
 
         {/* Signup route for new users */}
-        <Route
-          path="/signup"
-          element={<Signup />}
-        />
+        <Route path="/signup" element={<Signup />} />
 
         {/* Student Dashboard */}
         <Route
