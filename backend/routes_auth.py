@@ -7,6 +7,8 @@ from auth_jwt import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from passlib.context import CryptContext
+from utils_password import hash_password
+
 
 router = APIRouter(
     prefix="/auth",
