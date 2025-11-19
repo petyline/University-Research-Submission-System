@@ -459,6 +459,13 @@ export default function AdminDashboard() {
                   >
                     Reject
                   </button>
+				  <button
+					  className="bg-purple-600 text-white px-3 py-1 rounded"
+					  onClick={() => resetPassword(selectedUser.id)}
+					>
+					  Reset Password
+					</button>
+
                   <button className="bg-gray-300 px-3 py-1 rounded" onClick={closeModal}>
                     Close
                   </button>
