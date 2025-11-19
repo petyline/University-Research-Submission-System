@@ -122,6 +122,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         }
     }
 
+@router.put("/reset_password/{user_id}")
+def reset_password(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Reset password to "1234567"
+    user.password = hash_password("1234567")
+    db.commit()
+
+    return {"message": "Password reset to 1234567"}
+
 # -------------------------------
 # ADMIN - List Pending Accounts
 # -------------------------------
