@@ -209,6 +209,24 @@ export default function AdminDashboard() {
     setSelectedSubmission(null);
   };
 
+  const resetPassword = async (id) => {
+  try {
+    const res = await fetch(`${API_URL}/auth/reset_password/${id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed reset");
+
+    toast.success("Password reset to 1234567");
+
+  } catch (err) {
+    toast.error("Reset failed: " + err.message);
+  }
+};
+
+
   // -------------------- UI --------------------
   return (
     <div>
