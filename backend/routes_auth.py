@@ -1,3 +1,4 @@
+# routes_auth.py
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from passlib.hash import pbkdf2_sha256, bcrypt
@@ -7,16 +8,47 @@ from auth_jwt import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from passlib.context import CryptContext
-from utils_password import hash_password
-
+from utils_email import send_email
+import uuid
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
+
+# We'll use pbkdf2_sha256 as the canonical hashing algorithm for new hashes.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
 # -------------------------------
-# Pydantic model for signup input
+# Local helper (replaces missing utils_password)
+# -------------------------------
+def hash_password(plain: str) -> str:
+    """Hash with pbkdf2_sha256 (consistent across app)."""
+    return pbkdf2_sha256.hash(plain)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    """Verify password against stored hash. Handles bcrypt -> pbkdf2 upgrade path."""
+    if not hashed:
+        return False
+
+    # If stored is bcrypt, use bcrypt.verify then (optionally) upgrade to pbkdf2 in DB caller
+    if hashed.startswith("$2b$") or hashed.startswith("$2a$") or hashed.startswith("$2y$"):
+        try:
+            return bcrypt.verify(plain, hashed)
+        except Exception:
+            return False
+
+    # Default: pbkdf2_sha256
+    try:
+        return pbkdf2_sha256.verify(plain, hashed)
+    except Exception:
+        return False
+
+
+# -------------------------------
+# Pydantic models
 # -------------------------------
 class SignupRequest(BaseModel):
     name: str
@@ -24,6 +56,16 @@ class SignupRequest(BaseModel):
     password: str
     role: str
     reg_number: Optional[str] = None  # Student reg no or Lecturer Staff ID
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
 
 # -------------------------------
 # SIGNUP - Requires Admin Approval
@@ -33,26 +75,25 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
     if payload.role not in RoleEnum.__members__:
         raise HTTPException(status_code=400, detail="Invalid role selected.")
 
-    # Email uniqueness check
+    # Email uniqueness
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # 🔥 Student Reg Number Rules
+    # Student reg_number rules
     if payload.role == "student":
-
         if not payload.reg_number:
             raise HTTPException(status_code=400, detail="Registration number is required for students")
 
-        # must be exactly 6 digits
+        # ensure exactly 6 numeric digits
         if not payload.reg_number.isdigit() or len(payload.reg_number) != 6:
             raise HTTPException(status_code=400, detail="Registration number must be EXACTLY 6 digits")
 
-        # must not already exist
+        # uniqueness on reg_number
         if db.query(User).filter(User.reg_number == payload.reg_number).first():
             raise HTTPException(status_code=400, detail="A student with this registration number already exists")
 
-    # Hash password
-    hashed_password = pbkdf2_sha256.hash(payload.password)
+    # Hash and create user
+    hashed_password = hash_password(payload.password)
 
     user = User(
         name=payload.name,
@@ -76,12 +117,6 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
 # -------------------------------
 # LOGIN - Requires Approval
 # -------------------------------
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
@@ -89,18 +124,18 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    stored_hash = user.password_hash
+    stored_hash = getattr(user, "password_hash", None)
+    if not stored_hash:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Detect bcrypt hash
+    # If bcrypt-stored hash -> verify with bcrypt then upgrade to pbkdf2
     if stored_hash.startswith("$2b$") or stored_hash.startswith("$2a$") or stored_hash.startswith("$2y$"):
-        # Verify using bcrypt
         if not bcrypt.verify(payload.password, stored_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        # ✅ Upgrade hash to pbkdf2 automatically
-        user.password_hash = pbkdf2_sha256.hash(payload.password)
+        # Upgrade stored hash to pbkdf2_sha256
+        user.password_hash = hash_password(payload.password)
         db.commit()
     else:
-        # Verify using pbkdf2_sha256
         if not pbkdf2_sha256.verify(payload.password, stored_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -124,34 +159,43 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         }
     }
 
+
+# -------------------------------
+# ADMIN - Reset password (to fixed '1234567')
+# -------------------------------
 @router.put("/reset_password/{user_id}")
-def reset_password(user_id: int, db: Session = Depends(get_db)):
+def reset_password(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Only admin allowed
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can reset passwords")
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Reset password to "1234567"
-    user.password = hash_password("1234567")
+    user.password_hash = hash_password("1234567")
     db.commit()
 
     return {"message": "Password reset to 1234567"}
+
 
 # -------------------------------
 # ADMIN - List Pending Accounts
 # -------------------------------
 @router.get("/pending_approvals")
 def list_pending_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if getattr(current_user, "role", None) != "admin":
         raise HTTPException(status_code=403, detail="Only admin can view pending approvals")
 
     return db.query(User).filter(User.is_approved == False).all()
+
 
 # -------------------------------
 # ADMIN - Approve or Reject Signup
 # -------------------------------
 @router.put("/approve_user/{user_id}")
 def approve_user(user_id: int, approve: bool, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if getattr(current_user, "role", None) != "admin":
         raise HTTPException(status_code=403, detail="Only admin can approve users")
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -168,15 +212,16 @@ def approve_user(user_id: int, approve: bool, db: Session = Depends(get_db), cur
     db.commit()
     return {"message": message}
 
+
 # -------------------------------
 # ADMIN - View All Users
 # -------------------------------
 @router.get("/users")
 def list_users(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if getattr(current_user, "role", None) != "admin":
         raise HTTPException(status_code=403, detail="Only admin can view all users")
 
     users = db.query(User).all()
@@ -190,8 +235,6 @@ def list_users(
             "role": u.role,
             "reg_number": u.reg_number,
             "is_approved": u.is_approved,
-
-            # 👇 NEW: Return assigned supervisors list if student
             "supervisors": [
                 {
                     "id": sup.id,
@@ -205,8 +248,10 @@ def list_users(
     return result
 
 
-
-@router.put("/auth/change_password")
+# -------------------------------
+# CHANGE PASSWORD for current user
+# -------------------------------
+@router.put("/change_password")
 def change_password(
     old_password: str = Body(..., embed=True),
     new_password: str = Body(..., embed=True),
@@ -230,41 +275,44 @@ def change_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Verify old password
-    if not pwd_context.verify(old_password, user.hashed_password):
+    # Verify old password using verify_password helper
+    if not verify_password(old_password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Old password is incorrect.",
         )
 
     # Hash and save new password
-    user.hashed_password = pwd_context.hash(new_password)
+    user.password_hash = hash_password(new_password)
     db.commit()
 
     return {"message": "Password changed successfully."}
 
-from utils_email import send_email
-import uuid
 
-def forgot_password(request, db):
-    email = request.email
+# -------------------------------
+# FORGOT PASSWORD - sends reset link (simple token)
+# -------------------------------
+@router.post("/forgot_password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = payload.email
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
+        # Security: do not reveal whether email exists
         return {"message": "If this email exists, a password reset link has been sent."}
 
-    # Generate token
+    # Create token and save to user.reset_token (create attribute on User if exists)
     token = str(uuid.uuid4())
-    user.reset_token = token
+    # attach token to user - ensure your User model has reset_token column if you want persistence
+    setattr(user, "reset_token", token)
     db.commit()
 
-    # Generate link
+    # Generate reset link (adjust domain as needed)
     reset_link = f"https://university-research-submission-system-1.onrender.com/reset-password/{token}"
 
     subject = "Password Reset Request"
-
     body_html = f"""
-    <p>Hello {user.full_name},</p>
+    <p>Hello {user.name},</p>
 
     <p>You requested to reset your password for the University Research Submission System.</p>
 
