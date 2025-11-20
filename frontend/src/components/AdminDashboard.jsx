@@ -45,7 +45,6 @@ export default function AdminDashboard() {
       // load everything important for dashboard
       Promise.all([fetchSubs(), fetchAllUsers(), fetchStudents(), fetchLecturers()]).catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // ---------- Fetchers ----------
