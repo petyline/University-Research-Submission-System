@@ -133,7 +133,7 @@ export default function LecturerPanel({ user, setUser }) {
 
       <main className="max-w-6xl mx-auto p-6">
 
-        {/* ⭐ NEW FILTERS ⭐ */}
+        {/* ⭐ FILTER BUTTONS ⭐ */}
         <div className="flex gap-3 mb-4">
           <button
             onClick={() => handleFilterChange("all")}
@@ -164,10 +164,14 @@ export default function LecturerPanel({ user, setUser }) {
           <table className="w-full border text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100">
+
+                {/* ⭐ NEW — NUMBER COLUMN ⭐ */}
+                <th className="p-2 border w-12 text-center">#</th>
+
                 <th className="p-2 border">Student</th>
                 <th className="p-2 border">Proposal Title</th>
 
-                {/* ⭐ NEW — Proposal Type Column ⭐ */}
+                {/* ⭐ Proposal Type Column ⭐ */}
                 <th className="p-2 border">Proposal Type</th>
 
                 <th className="p-2 border">Similarity</th>
@@ -177,12 +181,15 @@ export default function LecturerPanel({ user, setUser }) {
             </thead>
 
             <tbody>
-              {filteredSubs.map((s) => (
+              {filteredSubs.map((s, index) => (
                 <tr key={s.id} className="hover:bg-gray-50 border-b">
+
+                  {/* ⭐ NEW — COUNTER VALUE ⭐ */}
+                  <td className="p-2 border text-center font-semibold">{index + 1}</td>
+
                   <td className="p-2 border">{s.student?.name} ({s.student?.reg_number})</td>
                   <td className="p-2 border">{s.proposed_title}</td>
 
-                  {/* ⭐ NEW ⭐ */}
                   <td className="p-2 border">
                     <span className="px-2 py-1 bg-gray-200 rounded text-xs">
                       {s.proposal_type}
