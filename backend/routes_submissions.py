@@ -108,18 +108,29 @@ def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
     postgrad_mode = settings.postgrad_mode if settings else "title_plus"
     allow_multiple = settings.allow_multiple_submissions if settings else False
 
-    # ENFORCE ONE SUBMISSION PER TYPE
-    if not allow_multiple:
-        existing_same_type = db.query(Submission).filter(
-            Submission.student_id == student.id,
-            Submission.proposal_type == payload.proposal_type
-        ).first()
+    # 🔥 STRICT CATEGORY CONTROL
+    existing_same_type = db.query(Submission).filter(
+        Submission.student_id == student.id,
+        Submission.proposal_type == payload.proposal_type
+    ).first()
 
-        if existing_same_type:
+    if existing_same_type:
+        # If approved → completely locked
+        if existing_same_type.final_decision and existing_same_type.final_decision.lower() == "approved":
             raise HTTPException(
                 status_code=400,
-                detail=f"You have already submitted a {payload.proposal_type}. "
-                       f"Multiple submissions of the same type are not allowed."
+                detail=f"You already have an APPROVED {payload.proposal_type}. Editing or new submission is not allowed."
+            )
+
+        # If rejected → allow new submission
+        if existing_same_type.final_decision and existing_same_type.final_decision.lower() == "rejected":
+            db.delete(existing_same_type)
+            db.commit()
+        else:
+            # Pending or lecturer reviewing → must edit instead
+            raise HTTPException(
+                status_code=400,
+                detail=f"You already submitted a {payload.proposal_type}. Please edit the existing one."
             )
 
     # Determine similarity mode
@@ -202,6 +213,13 @@ def update_submission(
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
 
+    # 🔥 LOCK AFTER APPROVAL
+    if sub.final_decision and sub.final_decision.lower() == "approved":
+        raise HTTPException(
+            status_code=400,
+            detail="This proposal has been approved and can no longer be edited."
+        )
+
     # Access control
     if current_user.role == "student" and current_user.id != sub.student_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -211,10 +229,11 @@ def update_submission(
         if not student or current_user not in student.supervisors:
             raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Prevent duplicate type on change
+    # SETTINGS
     settings = db.query(Settings).first()
     allow_multiple = settings.allow_multiple_submissions if settings else False
 
+    # Prevent duplicate type change
     if payload.proposal_type and not allow_multiple:
         duplicate = db.query(Submission).filter(
             Submission.student_id == sub.student_id,
@@ -225,7 +244,7 @@ def update_submission(
         if duplicate:
             raise HTTPException(
                 status_code=400,
-                detail=f"You already have a {payload.proposal_type} submission. Cannot change type."
+                detail=f"You already have a {payload.proposal_type} submission."
             )
 
     # Apply updates
@@ -268,7 +287,6 @@ def update_submission(
         "similarity": sub.similarity_score,
         "message": "Submission updated successfully"
     }
-
 
 # ============================================================
 #   VIEW STUDENT SUBMISSIONS
