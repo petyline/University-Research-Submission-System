@@ -403,6 +403,7 @@ return (
               <th className="p-2 border">Title</th>
               <th className="p-2 border text-center">Similarity</th>
               <th className="p-2 border text-center">Status</th>
+              <th className="p-2 border text-center">CA Score</th>
               <th className="p-2 border text-center">Action</th>
             </tr>
           </thead>
@@ -417,6 +418,11 @@ return (
                 </td>
                 <td className="p-2 border text-center">
                   {statusBadge(item.final_decision || "pending")}
+                </td>
+                <td className="p-2 border text-center">
+                  {item.proposal_type === "Seminar"
+                    ? item.ca_score ?? "-"
+                    : "-"}
                 </td>
                 <td className="p-2 border text-center space-x-3">
                   <button onClick={() => handleView(item)} className="text-green-600 hover:underline">View</button>
