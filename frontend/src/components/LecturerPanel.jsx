@@ -176,6 +176,7 @@ export default function LecturerPanel({ user, setUser }) {
 
                 <th className="p-2 border">Similarity</th>
                 <th className="p-2 border text-center">Decision</th>
+                <th className="p-2 border text-center">CA (30)</th>
                 <th className="p-2 border text-center">Action</th>
               </tr>
             </thead>
@@ -201,6 +202,51 @@ export default function LecturerPanel({ user, setUser }) {
                   </td>
 
                   <td className="p-2 border text-center">{s.final_decision || "-"}</td>
+
+                  <td className="p-2 border text-center">
+                    {s.proposal_type === "Seminar" ? (
+                      <input
+                        type="number"
+                        min="0"
+                        max="30"
+                        defaultValue={s.ca_score || ""}
+                        className="border rounded w-16 p-1 text-center"
+                        onBlur={async (e) => {
+                          const score = e.target.value;
+                  
+                          if (score === "") return;
+                  
+                          const token = localStorage.getItem("token");
+                  
+                          try {
+                            const res = await fetch(
+                              `${API_URL}/lecturer/add_ca/${s.id}?score=${score}`,
+                              {
+                                method: "PUT",
+                                headers: {
+                                  Authorization: `Bearer ${token}`
+                                }
+                              }
+                            );
+                  
+                            if (!res.ok) {
+                              const msg = await res.text();
+                              toast.error(msg);
+                              return;
+                            }
+                  
+                            toast.success("CA score saved");
+                            fetchSubs();
+                  
+                          } catch {
+                            toast.error("Failed to save score");
+                          }
+                        }}
+                      />
+                    ) : (
+                      "-"
+                    )}
+                  </td>
 
                   <td className="p-2 border text-center flex gap-2 justify-center">
                     <button
