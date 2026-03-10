@@ -72,6 +72,7 @@ class Submission(Base):
     lecturer_decision = Column(String, default="pending")
     admin_decision = Column(String, default="pending")
     final_decision = Column(String, default="pending")
+    ca_score = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     lecturer_decision_at = Column(DateTime, nullable=True)
 
