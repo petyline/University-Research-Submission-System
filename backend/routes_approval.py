@@ -223,6 +223,42 @@ def get_student_supervisor(student_id: int, db: Session = Depends(get_db)):
         "id": sup.id
     }
 
+@router.put("/lecturer/add_ca/{submission_id}")
+def add_ca_score(
+    submission_id: int,
+    score: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    if current_user.role != "lecturer":
+        raise HTTPException(status_code=403, detail="Only lecturers can add CA score")
+
+    if score < 0 or score > 30:
+        raise HTTPException(status_code=400, detail="CA score must be between 0 and 30")
+
+    sub = db.query(Submission).filter(Submission.id == submission_id).first()
+
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    if sub.proposal_type != "Seminar":
+        raise HTTPException(status_code=400, detail="CA score only applies to Seminar")
+
+    # ensure lecturer supervises the student
+    student = db.query(User).filter(User.id == sub.student_id).first()
+    if current_user not in student.supervisors:
+        raise HTTPException(status_code=403, detail="Not your student")
+
+    sub.ca_score = score
+    db.commit()
+    db.refresh(sub)
+
+    return {
+        "message": "CA score recorded",
+        "ca_score": sub.ca_score
+    }
+
 @router.post("/lecturer/decision/{submission_id}")
 def lecturer_decide_submission(
     submission_id: int,
