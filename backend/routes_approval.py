@@ -155,33 +155,54 @@ def get_settings(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admins only")
+
     s = db.query(Settings).first()
+
     if not s:
-        s = Settings(undergrad_mode="title", postgrad_mode="title_plus")
+        s = Settings(
+            undergrad_mode="title",
+            postgrad_mode="title_plus",
+            allow_multiple_submissions=False,
+            show_ca_to_students=False   # ⭐ NEW
+        )
         db.add(s)
         db.commit()
         db.refresh(s)
-    return {"undergrad_mode": s.undergrad_mode, "postgrad_mode": s.postgrad_mode}
 
+    return {
+        "undergrad_mode": s.undergrad_mode,
+        "postgrad_mode": s.postgrad_mode,
+        "allow_multiple_submissions": s.allow_multiple_submissions,
+        "show_ca_to_students": s.show_ca_to_students  # ⭐ NEW
+    }
 
 @router.put("/admin/settings")
 def update_settings(
     undergrad_mode: str = Body(..., embed=True),
     postgrad_mode: str = Body(..., embed=True),
-    allow_multiple_submissions: bool = Body(False, embed=True),  # ✅ New field
+    allow_multiple_submissions: bool = Body(False, embed=True),
+
+    # ⭐ NEW FIELD
+    show_ca_to_students: bool = Body(False, embed=True),
+
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 🔒 Admin-only access
+
+    # 🔒 Admin only
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admins only")
 
-    # Validate allowed modes
-    if undergrad_mode not in ("title", "title_plus") or postgrad_mode not in ("title", "title_plus"):
-        raise HTTPException(status_code=400, detail="Modes must be 'title' or 'title_plus'")
+    # Validate
+    if undergrad_mode not in ("title", "title_plus") or \
+       postgrad_mode not in ("title", "title_plus"):
+        raise HTTPException(
+            status_code=400,
+            detail="Modes must be 'title' or 'title_plus'"
+        )
 
-    # Retrieve or create settings record
     s = db.query(Settings).first()
+
     if not s:
         s = Settings()
         db.add(s)
@@ -189,7 +210,10 @@ def update_settings(
     # Update fields
     s.undergrad_mode = undergrad_mode
     s.postgrad_mode = postgrad_mode
-    s.allow_multiple_submissions = allow_multiple_submissions  # ✅ new setting
+    s.allow_multiple_submissions = allow_multiple_submissions
+
+    # ⭐ NEW
+    s.show_ca_to_students = show_ca_to_students
 
     db.commit()
     db.refresh(s)
@@ -198,9 +222,9 @@ def update_settings(
         "message": "Settings updated successfully",
         "undergrad_mode": s.undergrad_mode,
         "postgrad_mode": s.postgrad_mode,
-        "allow_multiple_submissions": s.allow_multiple_submissions
+        "allow_multiple_submissions": s.allow_multiple_submissions,
+        "show_ca_to_students": s.show_ca_to_students
     }
-
 @router.get("/student_supervisor/{student_id}")
 def get_student_supervisor(student_id: int, db: Session = Depends(get_db)):
     # Fetch student
