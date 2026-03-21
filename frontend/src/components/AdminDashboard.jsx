@@ -190,6 +190,54 @@ export default function AdminDashboard() {
     }
   };
 
+  // ⭐ SAVE SETTINGS FUNCTION
+const saveSettings = async () => {
+  try {
+
+    const res = await fetch(`${API_URL}/admin/settings`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+
+        undergrad_mode: settings.undergrad_mode,
+
+        postgrad_mode: settings.postgrad_mode,
+
+        allow_multiple_submissions:
+          settings.allow_multiple_submissions,
+
+        // ⭐ NEW FIELD
+        show_ca_to_students:
+          settings.show_ca_to_students
+
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok)
+      throw new Error(data.detail || "Failed to save settings");
+
+    toast.success("Settings saved successfully");
+
+    await fetchSettings();
+
+  } catch (err) {
+
+    console.error(err);
+
+    toast.error(
+      "Failed to save settings: " +
+      err.message
+    );
+
+  }
+};
+
   const logout = () => {
     localStorage.removeItem('token');
     window.location.href = '/login';
@@ -540,59 +588,164 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ---------- Settings Tab ---------- */}
-        {activeTab === 'settings' && (
-          <div className="max-w-6xl mx-auto p-6">
-            <div className="max-w-xl space-y-6">
-              <h2 className="text-xl font-bold mb-2">Similarity Settings</h2>
+    {/* ---------- Settings Tab ---------- */}
+{activeTab === 'settings' && (
+  <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-xl space-y-6">
 
-              <div className="border rounded p-4">
-                <h3 className="font-semibold mb-2">Undergraduate (Seminar / Project)</h3>
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" checked={settings.undergrad_mode === 'title'} onChange={() => setSettings(s => ({ ...s, undergrad_mode: 'title' }))} />
-                    Title only
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" checked={settings.undergrad_mode === 'title_plus'} onChange={() => setSettings(s => ({ ...s, undergrad_mode: 'title_plus' }))} />
-                    Title + Other inputs
-                  </label>
-                </div>
-              </div>
+      <h2 className="text-xl font-bold mb-2">
+        System Settings
+      </h2>
 
-              <div className="border rounded p-4">
-                <h3 className="font-semibold mb-2">Postgraduate (Dissertation / Thesis)</h3>
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" checked={settings.postgrad_mode === 'title'} onChange={() => setSettings(s => ({ ...s, postgrad_mode: 'title' }))} />
-                    Title only
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" checked={settings.postgrad_mode === 'title_plus'} onChange={() => setSettings(s => ({ ...s, postgrad_mode: 'title_plus' }))} />
-                    Title + Other inputs
-                  </label>
-                </div>
-              </div>
+      {/* Undergraduate Mode */}
+      <div className="border rounded p-4">
+        <h3 className="font-semibold mb-2">
+          Undergraduate (Seminar / Project)
+        </h3>
 
-              <div className="border rounded p-4">
-                <h3 className="font-semibold mb-2">Submission Limit</h3>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={settings.allow_multiple_submissions} onChange={(e) => setSettings(s => ({ ...s, allow_multiple_submissions: e.target.checked }))} />
-                  Allow multiple submissions per student (Seminar/Project)
-                </label>
-              </div>
+        <div className="flex items-center gap-6">
 
-              <button onClick={async () => {
-                // saveSettings wrapper to call the existing function defined above
-                try {
-                  await saveSettings();
-                } catch (err) {
-                  // saveSettings already shows toasts
-                }
-              }} className="bg-blue-600 text-white px-4 py-2 rounded">Save Settings</button>
-            </div>
-          </div>
-        )}
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={settings.undergrad_mode === 'title'}
+              onChange={() =>
+                setSettings(s => ({
+                  ...s,
+                  undergrad_mode: 'title'
+                }))
+              }
+            />
+            Title only
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={settings.undergrad_mode === 'title_plus'}
+              onChange={() =>
+                setSettings(s => ({
+                  ...s,
+                  undergrad_mode: 'title_plus'
+                }))
+              }
+            />
+            Title + Other inputs
+          </label>
+
+        </div>
+      </div>
+
+      {/* Postgraduate Mode */}
+      <div className="border rounded p-4">
+        <h3 className="font-semibold mb-2">
+          Postgraduate (Dissertation / Thesis)
+        </h3>
+
+        <div className="flex items-center gap-6">
+
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={settings.postgrad_mode === 'title'}
+              onChange={() =>
+                setSettings(s => ({
+                  ...s,
+                  postgrad_mode: 'title'
+                }))
+              }
+            />
+            Title only
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={settings.postgrad_mode === 'title_plus'}
+              onChange={() =>
+                setSettings(s => ({
+                  ...s,
+                  postgrad_mode: 'title_plus'
+                }))
+              }
+            />
+            Title + Other inputs
+          </label>
+
+        </div>
+      </div>
+
+      {/* Submission Limit */}
+      <div className="border rounded p-4">
+        <h3 className="font-semibold mb-2">
+          Submission Limit
+        </h3>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={settings.allow_multiple_submissions}
+            onChange={(e) =>
+              setSettings(s => ({
+                ...s,
+                allow_multiple_submissions: e.target.checked
+              }))
+            }
+          />
+
+          Allow multiple submissions per student
+          (Seminar / Project)
+        </label>
+      </div>
+
+      {/* ⭐ NEW — CA Visibility Control */}
+      <div className="border rounded p-4">
+
+        <h3 className="font-semibold mb-2">
+          CA Score Visibility
+        </h3>
+
+        <label className="flex items-center gap-2">
+
+          <input
+            type="checkbox"
+            checked={settings.show_ca_to_students || false}
+            onChange={(e) =>
+              setSettings(s => ({
+                ...s,
+                show_ca_to_students: e.target.checked
+              }))
+            }
+          />
+
+          Show Seminar CA scores to students
+
+        </label>
+
+        <p className="text-xs text-gray-500 mt-2">
+          If unchecked, lecturers can assign CA scores,
+          but students will NOT see them until released.
+        </p>
+
+      </div>
+
+      {/* Save Button */}
+      <button
+        onClick={async () => {
+          try {
+            await saveSettings();
+          } catch (err) {
+            // saveSettings already handles errors
+          }
+        }}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Save Settings
+      </button>
+
+    </div>
+  </div>
+)}
       </main>
     </div>
   );
