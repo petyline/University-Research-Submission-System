@@ -298,6 +298,9 @@ def get_student_submissions(
     db: Session = Depends(get_db)
 ):
 
+    # ---------------------------
+    # Access Control
+    # ---------------------------
     if current_user.role == "student" and current_user.id != student_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -306,12 +309,64 @@ def get_student_submissions(
         if student and current_user not in student.supervisors:
             raise HTTPException(status_code=403, detail="Not authorized")
 
+    # ---------------------------
+    # Get Settings (for CA visibility)
+    # ---------------------------
+    settings = db.query(Settings).first()
+
+    show_ca = False
+    if settings:
+        show_ca = settings.show_ca_to_students
+
+    # ---------------------------
+    # Fetch Submissions
+    # ---------------------------
     submissions = db.query(Submission).filter(
         Submission.student_id == student_id
-    ).order_by(Submission.created_at.desc()).all()
+    ).order_by(
+        Submission.created_at.desc()
+    ).all()
 
-    return submissions
+    # ---------------------------
+    # Format Response
+    # ---------------------------
+    result = []
 
+    for s in submissions:
+
+        result.append({
+            "id": s.id,
+            "student_id": s.student_id,
+            "supervisor_id": s.supervisor_id,
+
+            "proposal_type": s.proposal_type,
+            "proposed_title": s.proposed_title,
+
+            "background": s.background,
+            "aim": s.aim,
+            "objectives": s.objectives,
+            "methods": s.methods,
+            "expected_results": s.expected_results,
+            "literature_review": s.literature_review,
+
+            "similarity_score": s.similarity_score,
+
+            "lecturer_decision": s.lecturer_decision,
+            "admin_decision": s.admin_decision,
+            "final_decision": s.final_decision,
+
+            "created_at": s.created_at,
+            "lecturer_decision_at": s.lecturer_decision_at,
+
+            # ⭐ CA visibility control
+            "ca_score": (
+                s.ca_score
+                if show_ca or current_user.role != "student"
+                else None
+            )
+        })
+
+    return result
 
 # ============================================================
 #   ADMIN / LECTURER VIEW ALL SUBMISSIONS
