@@ -12,6 +12,7 @@ export default function LecturerPanel({ user, setUser }) {
   const [decisionModal, setDecisionModal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState(null);
+  const [caInputs, setCaInputs] = useState({});
 
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -30,6 +31,12 @@ export default function LecturerPanel({ user, setUser }) {
       setSubs(data);
       applyFilter(data, filterType);   // ⭐ NEW ⭐
 
+      // ⭐ NEW — preload CA values into input state
+      const initialCA = {};
+      data.forEach(s => {
+        initialCA[s.id] = s.ca_score ?? "";
+      });
+      setCaInputs(initialCA);
     } catch (err) {
       toast.error("Failed to fetch submissions");
       setError("Failed to fetch submissions");
@@ -209,16 +216,30 @@ export default function LecturerPanel({ user, setUser }) {
                         type="number"
                         min="0"
                         max="30"
-                        value={s.ca_score ?? ""}
-                        
+                      
+                        value={caInputs[s.id] ?? ""}
+                      
                         className="border rounded w-16 p-1 text-center"
-                        onBlur={async (e) => {
-                          const score = e.target.value;
-                  
+                      
+                        // ⭐ ENABLE TYPING
+                        onChange={(e) => {
+                          const val = e.target.value;
+                      
+                          setCaInputs(prev => ({
+                            ...prev,
+                            [s.id]: val
+                          }));
+                        }}
+                      
+                        // ⭐ SAVE ON BLUR
+                        onBlur={async () => {
+                      
+                          const score = caInputs[s.id];
+                      
                           if (score === "") return;
-                  
+                      
                           const token = localStorage.getItem("token");
-                  
+                      
                           try {
                             const res = await fetch(
                               `${API_URL}/lecturer/add_ca/${s.id}?score=${score}`,
@@ -229,16 +250,17 @@ export default function LecturerPanel({ user, setUser }) {
                                 }
                               }
                             );
-                  
+                      
                             if (!res.ok) {
                               const msg = await res.text();
                               toast.error(msg);
                               return;
                             }
-                  
+                      
                             toast.success("CA score saved");
-                            fetchSubs();
-                  
+                      
+                            fetchSubs(); // refresh from DB
+                      
                           } catch {
                             toast.error("Failed to save score");
                           }
