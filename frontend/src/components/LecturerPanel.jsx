@@ -209,7 +209,8 @@ export default function LecturerPanel({ user, setUser }) {
                         type="number"
                         min="0"
                         max="30"
-                        defaultValue={s.ca_score || ""}
+                        value={s.ca_score ?? ""}
+                        
                         className="border rounded w-16 p-1 text-center"
                         onBlur={async (e) => {
                           const score = e.target.value;
