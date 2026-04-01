@@ -403,7 +403,7 @@ def get_all_submissions(
             "literature_review": s.literature_review,
 
             "similarity_score": float(s.similarity_score or 0),
-
+            "ca_score": s.ca_score,
             "student": {
                 "id": s.student.id,
                 "name": s.student.name,
