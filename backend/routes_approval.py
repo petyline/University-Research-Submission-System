@@ -9,6 +9,152 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
+
+# ---------- Academic Session Administration ----------
+
+class CreateAcademicSessionRequest(BaseModel):
+    name: str
+
+
+@router.get("/admin/academic-sessions")
+def admin_get_academic_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    sessions = db.query(AcademicSession).order_by(
+        AcademicSession.name.desc()
+    ).all()
+
+    result = []
+
+    for session in sessions:
+        student_count = db.query(User).filter(
+            User.role == "student",
+            User.academic_session_id == session.id
+        ).count()
+
+        submission_count = db.query(Submission).filter(
+            Submission.academic_session_id == session.id
+        ).count()
+
+        result.append({
+            "id": session.id,
+            "name": session.name,
+            "is_active": session.is_active,
+            "student_count": student_count,
+            "submission_count": submission_count,
+            "created_at": session.created_at
+        })
+
+    return result
+
+
+@router.post("/admin/academic-sessions")
+def admin_create_academic_session(
+    payload: CreateAcademicSessionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    name = payload.name.strip()
+
+    # Require consecutive academic years, e.g. 2027/2028
+    import re
+    match = re.fullmatch(r"(20\d{2})/(20\d{2})", name)
+
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail="Use the format YYYY/YYYY, e.g. 2027/2028"
+        )
+
+    start_year = int(match.group(1))
+    end_year = int(match.group(2))
+
+    if end_year != start_year + 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Academic session years must be consecutive"
+        )
+
+    existing = db.query(AcademicSession).filter(
+        AcademicSession.name == name
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="This academic session already exists"
+        )
+
+    session = AcademicSession(
+        name=name,
+        is_active=False
+    )
+
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    return {
+        "message": f"Academic session {name} created successfully",
+        "id": session.id,
+        "name": session.name,
+        "is_active": session.is_active
+    }
+
+
+@router.put("/admin/academic-sessions/{session_id}/activate")
+def admin_activate_academic_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    session = db.query(AcademicSession).filter(
+        AcademicSession.id == session_id
+    ).first()
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Academic session not found"
+        )
+
+    try:
+        # Deactivate all sessions first.
+        db.query(AcademicSession).update(
+            {AcademicSession.is_active: False},
+            synchronize_session=False
+        )
+
+        # Activate the selected session.
+        session.is_active = True
+
+        db.commit()
+        db.refresh(session)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to activate academic session"
+        )
+
+    return {
+        "message": f"{session.name} is now the active academic session",
+        "id": session.id,
+        "name": session.name,
+        "is_active": session.is_active
+    }
+
 @router.post('/admin/decide_submission/{submission_id}')
 def admin_decide_submission(submission_id: int, decision: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
     """
