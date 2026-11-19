@@ -481,39 +481,42 @@ def get_student_submissions(
 
     return result
 
+
 # ============================================================
-#   ADMIN / LECTURER VIEW ALL SUBMISSIONS
+# ADMIN / LECTURER VIEW ALL SUBMISSIONS
+# ============================================================
+
+# ============================================================
+# ADMIN / LECTURER VIEW ALL SUBMISSIONS
 # ============================================================
 @router.get("/submissions")
 def get_all_submissions(
     db: Session = Depends(get_db),
-    "matric_year": s.student.matric_year,
-    "academic_session_id": s.academic_session_id,
-    "academic_session": (
-        s.academic_session.name
-        if s.academic_session else None
-    ),
     current_user: User = Depends(get_current_user)
 ):
-
-    if current_user.role == "student":
+    if current_user.role == RoleEnum.student:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     query = db.query(Submission)
 
-    if current_user.role == "lecturer":
-        query = query.filter(Submission.supervisor_id == current_user.id)
+    if current_user.role == RoleEnum.lecturer:
+        query = query.filter(
+            Submission.supervisor_id == current_user.id
+        )
 
-    submissions = query.order_by(Submission.created_at.desc()).all()
+    submissions = query.order_by(
+        Submission.created_at.desc()
+    ).all()
 
     result = []
+
     for s in submissions:
         result.append({
             "id": s.id,
             "proposal_type": s.proposal_type.value,
             "proposed_title": s.proposed_title,
 
-            # RETURN ALL FIELDS NEEDED IN LECTURER PANEL
+            # Proposal details
             "background": s.background,
             "aim": s.aim,
             "objectives": s.objectives,
@@ -521,24 +524,40 @@ def get_all_submissions(
             "expected_results": s.expected_results,
             "literature_review": s.literature_review,
 
+            # Similarity and CA
             "similarity_score": float(s.similarity_score or 0),
             "ca_score": s.ca_score,
+
+            # Academic session
+            "academic_session_id": s.academic_session_id,
+            "academic_session": (
+                s.academic_session.name
+                if s.academic_session else None
+            ),
+
+            # Student information
             "student": {
                 "id": s.student.id,
                 "name": s.student.name,
                 "email": s.student.email,
-                "reg_number": s.student.reg_number
+                "reg_number": s.student.reg_number,
+                "matric_year": s.student.matric_year
             } if s.student else None,
 
+            # Supervisor information
             "supervisor": {
                 "id": s.supervisor.id,
                 "name": s.supervisor.name,
                 "email": s.supervisor.email
             } if s.supervisor else None,
 
+            # Decisions
             "lecturer_decision": s.lecturer_decision,
             "final_decision": s.final_decision,
+
+            # Dates
             "created_at": s.created_at
         })
 
     return result
+
