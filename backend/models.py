@@ -98,6 +98,13 @@ class Submission(Base):
     student = relationship("User", foreign_keys=[student_id], back_populates="submissions")
     supervisor = relationship("User", foreign_keys=[supervisor_id])
 
+    academic_session_id = Column(
+        Integer,
+        ForeignKey("academic_sessions.id"),
+        nullable=True
+    )
+    
+    academic_session = relationship("AcademicSession")
 
 @event.listens_for(Submission, "load")
 def fix_datetime_on_load(submission, _):
