@@ -497,19 +497,33 @@ def get_student_submissions(
 # ============================================================
 # ADMIN / LECTURER VIEW ALL SUBMISSIONS
 # ============================================================
+
 @router.get("/submissions")
 def get_all_submissions(
+    academic_session_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Students cannot access this endpoint
     if current_user.role == RoleEnum.student:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized"
+        )
 
+    # Start with all submissions
     query = db.query(Submission)
 
+    # Restrict lecturers to their assigned students
     if current_user.role == RoleEnum.lecturer:
         query = query.filter(
             Submission.supervisor_id == current_user.id
+        )
+
+    # Apply academic session filter
+    if academic_session_id is not None:
+        query = query.filter(
+            Submission.academic_session_id == academic_session_id
         )
 
     submissions = query.order_by(
