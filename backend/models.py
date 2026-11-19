@@ -36,6 +36,15 @@ student_supervisors = Table(
     Column("lecturer_id", Integer, ForeignKey("users.id"))
 )
 
+
+class AcademicSession(Base):
+    __tablename__ = "academic_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(20), unique=True, nullable=False)
+    is_active = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
