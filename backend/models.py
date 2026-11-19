@@ -54,6 +54,15 @@ class User(Base):
     role = Column(Enum(RoleEnum), nullable=False)
     reg_number = Column(String(6), unique=True, index=True, nullable=True)
     is_approved = Column(Boolean, default=False)
+    matric_year = Column(String(2), nullable=True)
+
+    academic_session_id = Column(
+        Integer,
+        ForeignKey("academic_sessions.id"),
+        nullable=True
+    )
+    
+    academic_session = relationship("AcademicSession")
 
     supervisors = relationship(
         'User',
