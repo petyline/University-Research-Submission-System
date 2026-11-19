@@ -14,36 +14,86 @@ export default function LecturerPanel({ user, setUser }) {
   const [error, setError] = useState(null);
   const [caInputs, setCaInputs] = useState({});
 
+  const [academicSessions, setAcademicSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+  
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
-  // Fetch submissions
-  const fetchSubs = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/submissions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  const fetchAcademicSessions = async () => {
+  try {
+    setLoadingSessions(true);
+    setSessionError("");
 
-      if (!res.ok) throw new Error("Failed to fetch submissions");
+    const token = localStorage.getItem("token");
 
-      const data = await res.json();
-      setSubs(data);
-      applyFilter(data, filterType);   // ⭐ NEW ⭐
+    const res = await fetch(
+      `${API_URL}/lecturer/academic-sessions`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
 
-      // ⭐ NEW — preload CA values into input state
-      const initialCA = {};
-      data.forEach(s => {
-        initialCA[s.id] = s.ca_score ?? "";
-      });
-      setCaInputs(initialCA);
-    } catch (err) {
-      toast.error("Failed to fetch submissions");
-      setError("Failed to fetch submissions");
+    if (!res.ok) {
+      throw new Error("Unable to retrieve academic sessions.");
     }
-  };
 
-  useEffect(() => { fetchSubs(); }, []);
+    const data = await res.json();
+
+    setAcademicSessions(data);
+
+  } catch (err) {
+    console.error(err);
+    setSessionError(err.message);
+  } finally {
+    setLoadingSessions(false);
+  }
+};
+  // Fetch submissions
+  const fetchSubs = async (sessionId = selectedSession?.id) => {
+  if (!sessionId) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${API_URL}/submissions?academic_session_id=${sessionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch submissions");
+    }
+
+    const data = await res.json();
+
+    setSubs(data);
+    applyFilter(data, filterType);
+
+    const initialCA = {};
+
+    data.forEach(s => {
+      initialCA[s.id] = s.ca_score ?? "";
+    });
+
+    setCaInputs(initialCA);
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to fetch submissions");
+    setError("Failed to fetch submissions");
+  }
+};
+
+useEffect(() => {fetchAcademicSessions();}, []);
 
   // ⭐ NEW ⭐ — Filter Logic
   const applyFilter = (all, type) => {
@@ -60,6 +110,16 @@ export default function LecturerPanel({ user, setUser }) {
   const handleFilterChange = (type) => {
     setFilterType(type);
     applyFilter(subs, type);
+  };
+
+  const selectAcademicSession = (session) => {
+    setSelectedSession(session);
+    setSubs([]);
+    setFilteredSubs([]);
+    setCaInputs({});
+    setFilterType("all");
+  
+    fetchSubs(session.id);
   };
 
   const decide = async (id, decision) => {
@@ -120,22 +180,153 @@ export default function LecturerPanel({ user, setUser }) {
     ));
   };
 
+  // Academic session selection screen
+if (loadingSessions) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <p className="text-gray-600">
+        Loading academic sessions...
+      </p>
+    </div>
+  );
+}
+
+if (!selectedSession) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+
+      <header className="bg-white shadow flex justify-between items-center px-6 py-4">
+        <h1 className="text-xl font-bold text-blue-700">
+          Lecturer Dashboard
+        </h1>
+
+        <div className="flex items-center gap-4">
+          <span className="text-gray-600">
+            👤 {user?.name}
+          </span>
+
+          <button
+            onClick={handleLogout}
+            className="px-3 py-2 bg-red-100 text-red-700 rounded"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto p-6">
+
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">
+            Select Academic Session
+          </h2>
+
+          <p className="text-gray-500 mt-2">
+            Choose the academic session you wish to manage.
+          </p>
+        </div>
+
+        {sessionError && (
+          <div className="bg-red-100 text-red-700 p-4 rounded mb-4">
+            {sessionError}
+
+            <button
+              onClick={fetchAcademicSessions}
+              className="ml-3 underline font-semibold"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!sessionError && academicSessions.length === 0 && (
+          <p className="text-gray-500">
+            No academic sessions have been configured.
+          </p>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-5">
+
+          {academicSessions.map(session => (
+            <div
+              key={session.id}
+              className="bg-white rounded-xl shadow-sm border p-6"
+            >
+
+              <div className="flex justify-between items-center mb-4">
+
+                <h3 className="text-xl font-bold text-gray-800">
+                  {session.name}
+                </h3>
+
+                {session.is_active && (
+                  <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
+                    Active Session
+                  </span>
+                )}
+
+              </div>
+
+              <p className="text-gray-500 text-sm mb-5">
+                {session.submission_count} submission(s) assigned to you.
+              </p>
+
+              <button
+                onClick={() => selectAcademicSession(session)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+              >
+                Manage Submissions
+              </button>
+
+            </div>
+          ))}
+
+        </div>
+
+      </main>
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-gray-50">
 
       {/* HEADER */}
       <header className="sticky top-0 bg-white shadow flex justify-between items-center px-6 py-3 border-b">
-        <h1 className="text-lg font-bold text-blue-700">Lecturer Dashboard</h1>
-
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-gray-600">👤 {user?.name}</span>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-          >
-            Logout
-          </button>
+        <div>
+          <h1 className="text-lg font-bold text-blue-700">
+            Lecturer Dashboard
+          </h1>
+        
+          <p className="text-sm text-gray-500">
+            Academic Session: {selectedSession?.name}
+          </p>
         </div>
+
+<div className="flex items-center gap-4 text-sm">
+  <span className="text-gray-600">👤 {user?.name}</span>
+
+  {/* Change Academic Session */}
+  <button
+    onClick={() => {
+      setSelectedSession(null);
+      setSubs([]);
+      setFilteredSubs([]);
+      setCaInputs({});
+      setFilterType("all");
+    }}
+    className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+  >
+    Change Session
+  </button>
+
+  {/* Logout */}
+  <button
+    onClick={handleLogout}
+    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+  >
+    Logout
+  </button>
+</div>
       </header>
 
       <main className="max-w-6xl mx-auto p-6">
