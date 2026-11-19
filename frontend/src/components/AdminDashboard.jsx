@@ -21,6 +21,9 @@ export default function AdminDashboard() {
   const [selectedLecturer, setSelectedLecturer] = useState(null);
   const [settings, setSettings] = useState({ undergrad_mode: 'title', postgrad_mode: 'title_plus' });
 
+  const [academicSessions, setAcademicSessions] = useState([]);
+  const [newSessionName, setNewSessionName] = useState("");
+  const [loadingSessions, setLoadingSessions] = useState(false);
   // Filters state for Submissions
   const [submissionFilter, setSubmissionFilter] = useState({
     category: null, // "Seminar"|"Project"|"Dissertation"|"Thesis" or null
@@ -41,6 +44,7 @@ export default function AdminDashboard() {
     else if (activeTab === 'users') fetchAllUsers();
     else if (activeTab === 'assign') { fetchStudents(); fetchLecturers(); }
     else if (activeTab === 'settings') fetchSettings();
+    else if (activeTab === 'sessions') fetchAcademicSessions();
     else if (activeTab === 'dashboard') {
       // load everything important for dashboard
       Promise.all([fetchSubs(), fetchAllUsers(), fetchStudents(), fetchLecturers()]).catch(() => {});
@@ -48,6 +52,34 @@ export default function AdminDashboard() {
   }, [activeTab]);
 
   // ---------- Fetchers ----------
+  const fetchAcademicSessions = async () => {
+    try {
+      setLoadingSessions(true);
+  
+      const res = await fetch(
+        `${API_URL}/admin/academic-sessions`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.detail || "Unable to load academic sessions");
+      }
+  
+      setAcademicSessions(data);
+  
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
   const fetchSettings = async () => {
     try {
       const res = await fetch(`${API_URL}/admin/settings`, { headers: { Authorization: `Bearer ${token}` }});
@@ -118,6 +150,76 @@ export default function AdminDashboard() {
   };
 
   // ---------- Actions ----------
+  const createAcademicSession = async () => {
+    const name = newSessionName.trim();
+  
+    if (!name) {
+      toast.error("Enter an academic session");
+      return;
+    }
+  
+    try {
+      const res = await fetch(
+        `${API_URL}/admin/academic-sessions`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name })
+        }
+      );
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to create session");
+      }
+  
+      toast.success(data.message);
+      setNewSessionName("");
+  
+      await fetchAcademicSessions();
+  
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+  
+  
+  const activateAcademicSession = async (sessionId) => {
+    const confirmed = window.confirm(
+      "Activating this session will deactivate the current academic session. Continue?"
+    );
+  
+    if (!confirmed) return;
+  
+    try {
+      const res = await fetch(
+        `${API_URL}/admin/academic-sessions/${sessionId}/activate`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to activate session");
+      }
+  
+      toast.success(data.message);
+  
+      await fetchAcademicSessions();
+  
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
   const approveUser = async (id, approve) => {
     try {
       const res = await fetch(`${API_URL}/auth/approve_user/${id}?approve=${approve}`, {
@@ -322,6 +424,7 @@ const saveSettings = async () => {
         <button onClick={() => setActiveTab('pending')} className={`px-3 py-1 rounded ${activeTab === 'pending' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Pending Users</button>
         <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'bg-white'}`}>All Users</button>
         <button onClick={() => setActiveTab('assign')} className={`px-3 py-1 rounded ${activeTab === 'assign' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Assign Supervisors</button>
+        <button onClick={() => setActiveTab('sessions')} className={`px-3 py-1 rounded ${ activeTab === 'sessions' ? 'bg-blue-600 text-white' : 'bg-white' }`}> Academic Sessions </button>
         <button onClick={() => setActiveTab('settings')} className={`px-3 py-1 rounded ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Settings</button>
       </nav>
 
@@ -588,6 +691,161 @@ const saveSettings = async () => {
           </div>
         )}
 
+        
+{/* ---------- Academic Sessions Tab ---------- */}
+{activeTab === 'sessions' && (
+  <div className="space-y-6">
+
+    <div>
+      <h2 className="text-xl font-bold">
+        Academic Session Management
+      </h2>
+
+      <p className="text-gray-500 mt-1">
+        Create academic sessions and control the active registration session.
+      </p>
+    </div>
+
+    {/* Create Session */}
+    <div className="bg-white border rounded-lg p-5 max-w-xl">
+
+      <h3 className="font-semibold mb-3">
+        Create New Academic Session
+      </h3>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+
+        <input
+          type="text"
+          value={newSessionName}
+          onChange={e => setNewSessionName(e.target.value)}
+          placeholder="e.g. 2027/2028"
+          className="border rounded p-2 flex-1"
+        />
+
+        <button
+          onClick={createAcademicSession}
+          className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
+        >
+          Create Session
+        </button>
+
+      </div>
+
+      <p className="text-xs text-gray-500 mt-2">
+        Use the format YYYY/YYYY. New sessions are created inactive.
+      </p>
+
+    </div>
+
+    {/* Session List */}
+    <div className="bg-white border rounded-lg overflow-hidden">
+
+      <div className="p-4 border-b flex justify-between items-center">
+
+        <h3 className="font-semibold">
+          Available Academic Sessions
+        </h3>
+
+        <button
+          onClick={fetchAcademicSessions}
+          className="text-blue-600 text-sm hover:underline"
+        >
+          Refresh
+        </button>
+
+      </div>
+
+      {loadingSessions ? (
+        <div className="p-6 text-center text-gray-500">
+          Loading academic sessions...
+        </div>
+      ) : academicSessions.length === 0 ? (
+        <div className="p-6 text-center text-gray-500">
+          No academic sessions found.
+        </div>
+      ) : (
+
+        <div className="overflow-x-auto">
+
+          <table className="w-full text-sm">
+
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="text-left p-3">Academic Session</th>
+                <th className="text-center p-3">Students</th>
+                <th className="text-center p-3">Submissions</th>
+                <th className="text-center p-3">Status</th>
+                <th className="text-center p-3">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {academicSessions.map(session => (
+
+                <tr key={session.id} className="border-t">
+
+                  <td className="p-3 font-semibold">
+                    {session.name}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {session.student_count}
+                  </td>
+
+                  <td className="p-3 text-center">
+                    {session.submission_count}
+                  </td>
+
+                  <td className="p-3 text-center">
+
+                    {session.is_active ? (
+                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                        Inactive
+                      </span>
+                    )}
+
+                  </td>
+
+                  <td className="p-3 text-center">
+
+                    {session.is_active ? (
+                      <span className="text-green-700 font-medium">
+                        Current Session
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => activateAcademicSession(session.id)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                      >
+                        Activate
+                      </button>
+                    )}
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
+      )}
+
+    </div>
+
+  </div>
+)}
+
+        
     {/* ---------- Settings Tab ---------- */}
 {activeTab === 'settings' && (
   <div className="max-w-6xl mx-auto p-6">
