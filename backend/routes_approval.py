@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Submission, User, Settings
+from models import Submission, User, Settings, AcademicSession
 from auth_jwt import get_current_user
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder 
@@ -74,7 +74,6 @@ def admin_auto_decide(threshold: float = 70.0, current_user = Depends(get_curren
 
 
 def serialize_submission(submission: Submission):
-    """Convert Submission + related student to a JSON-serializable dict"""
     return {
         "id": submission.id,
         "proposal_type": submission.proposal_type,
@@ -90,28 +89,97 @@ def serialize_submission(submission: Submission):
         "lecturer_decision": submission.lecturer_decision,
         "lecturer_decision_at": submission.lecturer_decision_at,
         "admin_decision": submission.admin_decision,
+        "ca_score": submission.ca_score,
+
+        "academic_session_id": submission.academic_session_id,
+        "academic_session": (
+            submission.academic_session.name
+            if submission.academic_session else None
+        ),
+
         "student": {
             "id": submission.student.id,
             "name": submission.student.name,
             "reg_number": submission.student.reg_number,
-            "email": submission.student.email
+            "email": submission.student.email,
+            "matric_year": submission.student.matric_year
         } if submission.student else None,
+
         "supervisor_id": submission.supervisor_id
     }
 
-@router.get('/submissions')
-def list_all_submissions(current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role == 'admin':
-        submissions = db.query(Submission).all()
-    elif current_user.role == 'lecturer':
-        submissions = db.query(Submission).filter(Submission.supervisor_id==current_user.id).all()
-    elif current_user.role == 'student':
-        submissions = db.query(Submission).filter(Submission.student_id==current_user.id).all()
-    else:
-        submissions = []
+@router.get("/lecturer/academic-sessions")
+def get_lecturer_academic_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "lecturer":
+        raise HTTPException(
+            status_code=403,
+            detail="Only lecturers can access this endpoint."
+        )
 
-    return [serialize_submission(s) for s in submissions]
-    
+    sessions = db.query(AcademicSession).order_by(
+        AcademicSession.name.desc()
+    ).all()
+
+    results = []
+
+    for session in sessions:
+        submission_count = db.query(Submission).filter(
+            Submission.supervisor_id == current_user.id,
+            Submission.academic_session_id == session.id
+        ).count()
+
+        results.append({
+            "id": session.id,
+            "name": session.name,
+            "is_active": session.is_active,
+            "submission_count": submission_count
+        })
+
+    return results
+
+
+@router.get('/submissions')
+def list_all_submissions(
+    academic_session_id: int = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role == 'admin':
+        query = db.query(Submission)
+
+    elif current_user.role == 'lecturer':
+        query = db.query(Submission).filter(
+            Submission.supervisor_id == current_user.id
+        )
+
+    elif current_user.role == 'student':
+        query = db.query(Submission).filter(
+            Submission.student_id == current_user.id
+        )
+
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized."
+        )
+
+    # Apply session filter when supplied
+    if academic_session_id is not None:
+        query = query.filter(
+            Submission.academic_session_id == academic_session_id
+        )
+
+    submissions = query.order_by(
+        Submission.created_at.desc()
+    ).all()
+
+    return [
+        serialize_submission(s)
+        for s in submissions
+    ]    
 
 
 class AssignSupervisorRequest(BaseModel):
