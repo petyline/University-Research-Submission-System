@@ -402,24 +402,28 @@ def update_submission(
 # ============================================================
 #   VIEW STUDENT SUBMISSIONS
 # ============================================================
+
+# ============================================================
+# VIEW STUDENT SUBMISSIONS
+# ============================================================
 @router.get("/student_submissions/{student_id}")
 def get_student_submissions(
     student_id: int,
     current_user: User = Depends(get_current_user),
-    "academic_session_id": s.academic_session_id,
-    "academic_session": s.academic_session.name if s.academic_session else None,
     db: Session = Depends(get_db)
 ):
-
     # ---------------------------
     # Access Control
     # ---------------------------
-    if current_user.role == "student" and current_user.id != student_id:
+    if current_user.role == RoleEnum.student and current_user.id != student_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    if current_user.role == "lecturer":
-        student = db.query(User).filter(User.id == student_id).first()
-        if student and current_user not in student.supervisors:
+    if current_user.role == RoleEnum.lecturer:
+        student = db.query(User).filter(
+            User.id == student_id
+        ).first()
+
+        if not student or current_user not in student.supervisors:
             raise HTTPException(status_code=403, detail="Not authorized")
 
     # ---------------------------
@@ -427,9 +431,7 @@ def get_student_submissions(
     # ---------------------------
     settings = db.query(Settings).first()
 
-    show_ca = False
-    if settings:
-        show_ca = settings.show_ca_to_students
+    show_ca = settings.show_ca_to_students if settings else False
 
     # ---------------------------
     # Fetch Submissions
@@ -446,7 +448,6 @@ def get_student_submissions(
     result = []
 
     for s in submissions:
-
         result.append({
             "id": s.id,
             "student_id": s.student_id,
@@ -464,6 +465,13 @@ def get_student_submissions(
 
             "similarity_score": s.similarity_score,
 
+            # Academic session
+            "academic_session_id": s.academic_session_id,
+            "academic_session": (
+                s.academic_session.name
+                if s.academic_session else None
+            ),
+
             "lecturer_decision": s.lecturer_decision,
             "admin_decision": s.admin_decision,
             "final_decision": s.final_decision,
@@ -471,10 +479,10 @@ def get_student_submissions(
             "created_at": s.created_at,
             "lecturer_decision_at": s.lecturer_decision_at,
 
-            # ⭐ CA visibility control
+            # CA visibility control
             "ca_score": (
                 s.ca_score
-                if show_ca or current_user.role != "student"
+                if show_ca or current_user.role != RoleEnum.student
                 else None
             )
         })
