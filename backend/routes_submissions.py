@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import get_db
-from models import Submission, User, ProposalTypeEnum, Settings
+from models import Submission, User, ProposalTypeEnum, Settings, RoleEnum
 from auth_jwt import get_current_user
 from utils_similarity import compute_similarity_percent
 from utils_email import send_email
@@ -86,82 +86,163 @@ class ProposalUpdate(BaseModel):
 # ============================================================
 #   SUBMIT PROPOSAL
 # ============================================================
+
 @router.post("/submit")
-def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
+def submit_proposal(
+    payload: ProposalSubmission,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # ---------------------------------
+    # AUTHENTICATION AND ACCESS CONTROL
+    # ---------------------------------
+    if current_user.role != RoleEnum.student:
+        raise HTTPException(
+            status_code=403,
+            detail="Only students can submit proposals."
+        )
 
-    student = (
-        db.query(User)
-        .filter(User.id == payload.student_id, User.role == "student")
-        .first()
-    )
+    if current_user.id != payload.student_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot submit a proposal on behalf of another student."
+        )
+
+    student = db.query(User).filter(
+        User.id == current_user.id,
+        User.role == RoleEnum.student
+    ).first()
+
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found."
+        )
 
-    if not student.supervisors or len(student.supervisors) == 0:
-        raise HTTPException(status_code=400, detail="No supervisor assigned")
+    # ---------------------------------
+    # ACADEMIC SESSION VALIDATION
+    # ---------------------------------
+    if not student.academic_session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Your academic session has not been assigned. Please contact the administrator."
+        )
+
+    academic_session_id = student.academic_session_id
+
+    # ---------------------------------
+    # SUPERVISOR VALIDATION
+    # ---------------------------------
+    if not student.supervisors:
+        raise HTTPException(
+            status_code=400,
+            detail="No supervisor assigned."
+        )
 
     supervisor = student.supervisors[0]
 
+    # ---------------------------------
     # SETTINGS
+    # ---------------------------------
     settings = db.query(Settings).first()
+
     undergrad_mode = settings.undergrad_mode if settings else "title"
     postgrad_mode = settings.postgrad_mode if settings else "title_plus"
-    allow_multiple = settings.allow_multiple_submissions if settings else False
 
-    # 🔥 STRICT CATEGORY CONTROL
+    # ---------------------------------
+    # STRICT CATEGORY CONTROL
+    # Within the student's academic session
+    # ---------------------------------
     existing_same_type = db.query(Submission).filter(
         Submission.student_id == student.id,
-        Submission.proposal_type == payload.proposal_type
+        Submission.proposal_type == payload.proposal_type,
+        Submission.academic_session_id == academic_session_id
     ).first()
 
     if existing_same_type:
-        # If approved → completely locked
-        if existing_same_type.final_decision and existing_same_type.final_decision.lower() == "approved":
+
+        if (
+            existing_same_type.final_decision
+            and existing_same_type.final_decision.lower() == "approved"
+        ):
             raise HTTPException(
                 status_code=400,
-                detail=f"You already have an APPROVED {payload.proposal_type}. Editing or new submission is not allowed."
+                detail=f"You already have an APPROVED {payload.proposal_type.value}. Editing or new submission is not allowed."
             )
 
-        # If rejected → allow new submission
-        if existing_same_type.final_decision and existing_same_type.final_decision.lower() == "rejected":
+        if (
+            existing_same_type.final_decision
+            and existing_same_type.final_decision.lower() == "rejected"
+        ):
             db.delete(existing_same_type)
             db.commit()
+
         else:
-            # Pending or lecturer reviewing → must edit instead
             raise HTTPException(
                 status_code=400,
-                detail=f"You already submitted a {payload.proposal_type}. Please edit the existing one."
+                detail=f"You already submitted a {payload.proposal_type.value}. Please edit the existing one."
             )
 
-    # Determine similarity mode
+    # ---------------------------------
+    # SIMILARITY MODE
+    # ---------------------------------
     level = get_degree_level(payload.proposal_type)
-    mode = undergrad_mode if level == "undergrad" else postgrad_mode
 
-    # Build text for similarity
+    mode = (
+        undergrad_mode
+        if level == "undergrad"
+        else postgrad_mode
+    )
+
+    # Compare against existing submissions of the same category.
+    # Cross-session comparison is retained for similarity checking.
     existing = db.query(Submission).filter(
         Submission.proposal_type == payload.proposal_type
     ).all()
 
     existing_texts = []
+
     for e in existing:
         parts = [
-            e.background, e.aim, e.objectives, e.methods,
-            e.expected_results, e.literature_review
+            e.background,
+            e.aim,
+            e.objectives,
+            e.methods,
+            e.expected_results,
+            e.literature_review
         ]
-        existing_texts.append(build_text_for_mode(mode, e.proposed_title, parts))
+
+        existing_texts.append(
+            build_text_for_mode(mode, e.proposed_title, parts)
+        )
 
     new_parts = [
-        payload.background, payload.aim, payload.objectives,
-        payload.methods, payload.expected_results, payload.literature_review
+        payload.background,
+        payload.aim,
+        payload.objectives,
+        payload.methods,
+        payload.expected_results,
+        payload.literature_review
     ]
-    new_text = build_text_for_mode(mode, payload.proposed_title, new_parts)
 
-    similarity = compute_similarity_percent(new_text, existing_texts)
+    new_text = build_text_for_mode(
+        mode,
+        payload.proposed_title,
+        new_parts
+    )
 
+    similarity = compute_similarity_percent(
+        new_text,
+        existing_texts
+    )
+
+    # ---------------------------------
     # SAVE SUBMISSION
+    # ---------------------------------
     submission = Submission(
         student_id=student.id,
         supervisor_id=supervisor.id,
+        academic_session_id=academic_session_id,
         proposal_type=payload.proposal_type,
         proposed_title=payload.proposed_title,
         background=payload.background,
@@ -170,33 +251,63 @@ def submit_proposal(payload: ProposalSubmission, db: Session = Depends(get_db)):
         methods=payload.methods,
         expected_results=payload.expected_results,
         literature_review=payload.literature_review,
-        similarity_score=similarity,
+        similarity_score=similarity
     )
-    db.add(submission)
-    db.commit()
-    db.refresh(submission)
 
-    # Notify student
+    try:
+        db.add(submission)
+        db.commit()
+        db.refresh(submission)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Submission could not be saved. Please try again."
+        )
+
+    # ---------------------------------
+    # NOTIFY STUDENT
+    # ---------------------------------
     send_email(
         student.email,
         "Submission received",
-        f"<p>Your {payload.proposal_type} submission was received. Similarity: <b>{similarity}%</b>.</p>"
+        f"""
+        <p>Your {payload.proposal_type.value} submission was received.</p>
+        <p>Academic Session: <b>{student.academic_session.name}</b></p>
+        <p>Similarity: <b>{similarity}%</b>.</p>
+        """
     )
 
-    # Notify supervisor
-    warn = '<p style="color:red"><b>⚠ High similarity detected</b></p>' if similarity >= 70 else ""
+    # ---------------------------------
+    # NOTIFY SUPERVISOR
+    # ---------------------------------
+    warn = (
+        '<p style="color:red"><b>⚠ High similarity detected</b></p>'
+        if similarity >= 70 else ""
+    )
+
     send_email(
         supervisor.email,
         f"New submission from {student.reg_number or student.email}",
         f"""
-        <p>Student <b>{student.name} ({student.reg_number})</b> submitted a {payload.proposal_type}.</p>
+        <p>Student <b>{student.name} ({student.reg_number})</b>
+        submitted a {payload.proposal_type.value}.</p>
+
+        <p>Academic Session: <b>{student.academic_session.name}</b></p>
         <p>Similarity: <b>{similarity}%</b>.</p>
         {warn}
         <p>Please log in to review.</p>
         """
     )
 
-    return {"id": submission.id, "similarity": similarity}
+    return {
+        "id": submission.id,
+        "similarity": similarity,
+        "academic_session_id": submission.academic_session_id,
+        "academic_session": student.academic_session.name,
+        "message": "Submission received successfully."
+    }
 
 
 # ============================================================
@@ -295,6 +406,8 @@ def update_submission(
 def get_student_submissions(
     student_id: int,
     current_user: User = Depends(get_current_user),
+    "academic_session_id": s.academic_session_id,
+    "academic_session": s.academic_session.name if s.academic_session else None,
     db: Session = Depends(get_db)
 ):
 
@@ -374,6 +487,12 @@ def get_student_submissions(
 @router.get("/submissions")
 def get_all_submissions(
     db: Session = Depends(get_db),
+    "matric_year": s.student.matric_year,
+    "academic_session_id": s.academic_session_id,
+    "academic_session": (
+        s.academic_session.name
+        if s.academic_session else None
+    ),
     current_user: User = Depends(get_current_user)
 ):
 
