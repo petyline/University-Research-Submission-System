@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from passlib.hash import pbkdf2_sha256, bcrypt
 from database import get_db
-from models import User, RoleEnum
+from models import User, RoleEnum, AcademicSession
 from auth_jwt import create_access_token, get_current_user
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -55,7 +55,8 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     role: str
-    reg_number: Optional[str] = None  # Student reg no or Lecturer Staff ID
+    reg_number: Optional[str] = None
+    matric_year: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -66,53 +67,163 @@ class LoginRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
+# -------------------------------
+# PUBLIC - Get Active Academic Session
+# -------------------------------
+@router.get("/active-session")
+def get_active_session(db: Session = Depends(get_db)):
+
+    active_sessions = db.query(AcademicSession).filter(
+        AcademicSession.is_active == True
+    ).all()
+
+    if not active_sessions:
+        raise HTTPException(
+            status_code=404,
+            detail="No active academic session has been configured."
+        )
+
+    if len(active_sessions) > 1:
+        raise HTTPException(
+            status_code=500,
+            detail="Multiple active academic sessions found. Contact the administrator."
+        )
+
+    session = active_sessions[0]
+
+    return {
+        "id": session.id,
+        "name": session.name
+    }
+
+
 
 # -------------------------------
 # SIGNUP - Requires Admin Approval
+# Academic Session Automatically Assigned
 # -------------------------------
 @router.post("/signup")
 def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+
+    # Validate role
     if payload.role not in RoleEnum.__members__:
-        raise HTTPException(status_code=400, detail="Invalid role selected.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role selected."
+        )
 
     # Email uniqueness
-    if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    if db.query(User).filter(
+        User.email == payload.email
+    ).first():
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
 
-    # Student reg_number rules
+    matric_year = None
+    academic_session = None
+
+    # ---------------------------------
+    # STUDENT REGISTRATION VALIDATION
+    # ---------------------------------
     if payload.role == "student":
+
+        # Registration number validation
         if not payload.reg_number:
-            raise HTTPException(status_code=400, detail="Registration number is required for students")
+            raise HTTPException(
+                status_code=400,
+                detail="Registration number is required for students"
+            )
 
-        # ensure exactly 6 numeric digits
         if not payload.reg_number.isdigit() or len(payload.reg_number) != 6:
-            raise HTTPException(status_code=400, detail="Registration number must be EXACTLY 6 digits")
+            raise HTTPException(
+                status_code=400,
+                detail="Registration number must be EXACTLY 6 digits"
+            )
 
-        # uniqueness on reg_number
-        if db.query(User).filter(User.reg_number == payload.reg_number).first():
-            raise HTTPException(status_code=400, detail="A student with this registration number already exists")
+        # Registration number uniqueness
+        if db.query(User).filter(
+            User.reg_number == payload.reg_number
+        ).first():
+            raise HTTPException(
+                status_code=400,
+                detail="A student with this registration number already exists"
+            )
 
-    # Hash and create user
+        # Matriculation year validation
+        valid_matric_years = {
+            f"{year:02d}" for year in range(15, 25)
+        }
+
+        if payload.matric_year not in valid_matric_years:
+            raise HTTPException(
+                status_code=400,
+                detail="Please select a valid matriculation year between 15 and 24."
+            )
+
+        matric_year = payload.matric_year
+
+        # Retrieve the active academic session
+        active_sessions = db.query(AcademicSession).filter(
+            AcademicSession.is_active == True
+        ).all()
+
+        if not active_sessions:
+            raise HTTPException(
+                status_code=400,
+                detail="Student registration is currently unavailable because no active academic session has been configured."
+            )
+
+        if len(active_sessions) > 1:
+            raise HTTPException(
+                status_code=500,
+                detail="Multiple active academic sessions found. Please contact the administrator."
+            )
+
+        academic_session = active_sessions[0]
+
+    # ---------------------------------
+    # CREATE USER
+    # ---------------------------------
     hashed_password = hash_password(payload.password)
 
     user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hashed_password,
-        role=payload.role,
-        reg_number=payload.reg_number,
+        role=RoleEnum(payload.role),
+        reg_number=payload.reg_number if payload.role == "student" else None,
+        matric_year=matric_year,
+        academic_session_id=(
+            academic_session.id if academic_session else None
+        ),
         is_approved=False
     )
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    return {
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Registration failed. Please try again."
+        )
+
+    response = {
         "message": "Signup successful. Await admin approval.",
         "user_id": user.id
     }
 
+    if academic_session:
+        response["academic_session"] = academic_session.name
+        response["academic_session_id"] = academic_session.id
+        response["matric_year"] = user.matric_year
+
+    return response
 
 # -------------------------------
 # LOGIN - Requires Approval
