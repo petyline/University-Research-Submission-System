@@ -333,11 +333,45 @@ def list_users(
     current_user: User = Depends(get_current_user)
 ):
     if getattr(current_user, "role", None) != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can view all users")
+        raise HTTPException(
+            status_code=403,
+            detail="Only admin can view all users"
+        )
 
-    users = db.query(User).all()
+    # Get the active academic session
+    active_sessions = db.query(AcademicSession).filter(
+        AcademicSession.is_active == True
+    ).all()
 
+    if len(active_sessions) > 1:
+        raise HTTPException(
+            status_code=500,
+            detail="Multiple active academic sessions found. Contact the administrator."
+        )
+
+    active_session = active_sessions[0] if active_sessions else None
+
+    users = []
+
+    # Include only students belonging to the active academic session
+    if active_session:
+        active_students = db.query(User).filter(
+            User.role == "student",
+            User.academic_session_id == active_session.id
+        ).order_by(User.name.asc()).all()
+
+        users.extend(active_students)
+
+    # Include all lecturers, regardless of academic session
+    all_lecturers = db.query(User).filter(
+        User.role == "lecturer"
+    ).order_by(User.name.asc()).all()
+
+    users.extend(all_lecturers)
+
+    # Prepare response
     result = []
+
     for u in users:
         result.append({
             "id": u.id,
@@ -345,6 +379,14 @@ def list_users(
             "email": u.email,
             "role": u.role,
             "reg_number": u.reg_number,
+            "matric_year": u.matric_year,
+            "academic_session_id": (
+                u.academic_session_id if u.role == "student" else None
+            ),
+            "academic_session": (
+                active_session.name
+                if u.role == "student" and active_session else None
+            ),
             "is_approved": u.is_approved,
             "supervisors": [
                 {
