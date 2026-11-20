@@ -113,9 +113,29 @@ export default function StudentPanel({ user, setUser }) {
       });
 
       if (!res.ok) {
-        const msg = await res.text();
-        toast.error(`Submission failed: ${msg}`);
-        return;
+      
+          if (res.status === 401) {
+              toast.error(
+                  "Your session has expired. Please log in again and resubmit your proposal."
+              );
+      
+              localStorage.removeItem("token");
+              setUser(null);
+              navigate("/", { replace: true });
+              return;
+          }
+      
+          let message = "Unable to submit proposal.";
+      
+          try {
+              const errorData = await res.json();
+              message = errorData.detail || message;
+          } catch {
+              // Retain the default error message.
+          }
+      
+          toast.error(message);
+          return;
       }
 
       const data = await res.json();
