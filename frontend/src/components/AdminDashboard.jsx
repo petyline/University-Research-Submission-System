@@ -32,6 +32,8 @@ export default function AdminDashboard() {
 
   // All users view filter for unassigned students
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  // All Users display filter
+  const [userDisplayFilter, setUserDisplayFilter] = useState("all");
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
   const token = localStorage.getItem('token');
@@ -370,12 +372,31 @@ const saveSettings = async () => {
   }, [subs, submissionFilter]);
 
   // All users view filtered by unassigned students
+  // All Users filtering
   const displayedUsers = useMemo(() => {
-    if (!showUnassignedOnly) return allUsers;
-    // show only students with no assigned supervisor
-    return allUsers.filter(u => u.role === 'student' && (!u.supervisors || u.supervisors.length === 0));
-  }, [allUsers, showUnassignedOnly]);
-
+  
+      let filtered = allUsers;
+  
+      // Filter by user category
+      if (userDisplayFilter === "students") {
+          filtered = filtered.filter(u => u.role === "student");
+      } 
+      else if (userDisplayFilter === "lecturers") {
+          filtered = filtered.filter(u => u.role === "lecturer");
+      }
+  
+      // Existing unassigned students filter
+      if (showUnassignedOnly) {
+          filtered = filtered.filter(
+              u => u.role === "student" &&
+              (!u.supervisors || u.supervisors.length === 0)
+          );
+      }
+  
+      return filtered;
+  
+  }, [allUsers, userDisplayFilter, showUnassignedOnly]);
+  
   const openModal = (item, type) => {
     setModalType(type);
     if (type === 'user') setSelectedUser(item);
@@ -565,15 +586,51 @@ const saveSettings = async () => {
         {/* ---------- All Users Tab (with Unassigned filter) ---------- */}
         {activeTab === 'users' && (
           <>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-bold">All Users</h2>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={showUnassignedOnly} onChange={(e) => setShowUnassignedOnly(e.target.checked)} />
-                  Show unassigned students only
-                </label>
-                <button className="px-3 py-1 rounded bg-gray-200" onClick={() => { setShowUnassignedOnly(false); toast.success('Filter cleared'); }}>Clear</button>
-              </div>
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+            
+                <div>
+                    <h2 className="text-xl font-bold">All Users</h2>
+                    <p className="text-sm text-gray-500">
+                        Students: Active Academic Session | Lecturers: All Sessions
+                    </p>
+                </div>
+            
+                <div className="flex flex-wrap items-center gap-3">
+            
+                    {/* User category filter */}
+                    <select
+                        value={userDisplayFilter}
+                        onChange={(e) => setUserDisplayFilter(e.target.value)}
+                        className="border rounded px-3 py-2 bg-white"
+                    >
+                        <option value="all">All Users</option>
+                        <option value="students">Students Only</option>
+                        <option value="lecturers">Lecturers Only</option>
+                    </select>
+            
+                    {/* Existing unassigned students filter */}
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={showUnassignedOnly}
+                            onChange={(e) => setShowUnassignedOnly(e.target.checked)}
+                        />
+                        Show unassigned students only
+                    </label>
+            
+                    {/* Clear filters */}
+                    <button
+                        className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                        onClick={() => {
+                            setUserDisplayFilter("all");
+                            setShowUnassignedOnly(false);
+                            toast.success("Filters cleared");
+                        }}
+                    >
+                        Clear
+                    </button>
+            
+                </div>
             </div>
 
             <table className="w-full border-collapse border border-gray-300">
