@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import get_db
-from models import Submission, User, ProposalTypeEnum, Settings, RoleEnum
+from models import (
+    Submission, User, ProposalTypeEnum, Settings,
+    RoleEnum, AcademicSession
+)
 from auth_jwt import get_current_user
 from utils_similarity import compute_similarity_percent
 from utils_email import send_email
@@ -161,27 +164,25 @@ def submit_proposal(
 
     if existing_same_type:
 
-        if (
-            existing_same_type.final_decision
-            and existing_same_type.final_decision.lower() == "approved"
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail=f"You already have an APPROVED {payload.proposal_type.value}. Editing or new submission is not allowed."
+    if (
+        existing_same_type.final_decision
+        and existing_same_type.final_decision.lower() == "approved"
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Your {payload.proposal_type.value} has already been approved. "
+                "A new submission or edit is not allowed."
             )
+        )
 
-        if (
-            existing_same_type.final_decision
-            and existing_same_type.final_decision.lower() == "rejected"
-        ):
-            db.delete(existing_same_type)
-            db.commit()
-
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"You already submitted a {payload.proposal_type.value}. Please edit the existing one."
-            )
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"You already have a {payload.proposal_type.value} submission "
+            "for this academic session. Please edit your existing submission."
+        )
+    )
 
     # ---------------------------------
     # SIMILARITY MODE
@@ -341,57 +342,131 @@ def update_submission(
             raise HTTPException(status_code=403, detail="Not authorized")
 
     # SETTINGS
-    settings = db.query(Settings).first()
-    allow_multiple = settings.allow_multiple_submissions if settings else False
-
-    # Prevent duplicate type change
-    if payload.proposal_type and not allow_multiple:
-        duplicate = db.query(Submission).filter(
-            Submission.student_id == sub.student_id,
-            Submission.proposal_type == payload.proposal_type,
-            Submission.id != sub.id
-        ).first()
-
-        if duplicate:
-            raise HTTPException(
-                status_code=400,
-                detail=f"You already have a {payload.proposal_type} submission."
+    # ---------------------------------
+    # STRICT CATEGORY DUPLICATE CONTROL
+    # ---------------------------------
+    
+    new_proposal_type = (
+        payload.proposal_type
+        if payload.proposal_type is not None
+        else sub.proposal_type
+    )
+    
+    duplicate = db.query(Submission).filter(
+        Submission.student_id == sub.student_id,
+        Submission.academic_session_id == sub.academic_session_id,
+        Submission.proposal_type == new_proposal_type,
+        Submission.id != sub.id
+    ).first()
+    
+    if duplicate:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"You already have a {new_proposal_type.value} submission "
+                "for this academic session. You can only edit the existing one."
             )
+        )
 
     # Apply updates
-    for field, value in payload.dict(exclude_unset=True).items():
+    
+    # ---------------------------------
+    # APPLY STUDENT'S EDITS
+    # ---------------------------------
+    for field, value in payload.dict(
+        exclude_unset=True,
+        exclude_none=True
+    ).items():
         setattr(sub, field, value)
 
-    # Recompute similarity
-    undergrad_mode = settings.undergrad_mode if settings else "title"
-    postgrad_mode = settings.postgrad_mode if settings else "title_plus"
+    # ---------------------------------
+    # RECALCULATE SIMILARITY
+    # ---------------------------------
+    settings = db.query(Settings).first()
+
+    undergrad_mode = (
+        settings.undergrad_mode if settings else "title"
+    )
+    postgrad_mode = (
+        settings.postgrad_mode if settings else "title_plus"
+    )
 
     level = get_degree_level(sub.proposal_type)
-    mode = undergrad_mode if level == "undergrad" else postgrad_mode
 
+    mode = (
+        undergrad_mode
+        if level == "undergrad"
+        else postgrad_mode
+    )
+
+    # Compare against other submissions in the same category.
+    # Cross-session comparison is retained.
     existing = db.query(Submission).filter(
         Submission.proposal_type == sub.proposal_type,
         Submission.id != sub.id
     ).all()
 
     existing_texts = []
+
     for e in existing:
         parts = [
-            e.background, e.aim, e.objectives, e.methods,
-            e.expected_results, e.literature_review
+            e.background,
+            e.aim,
+            e.objectives,
+            e.methods,
+            e.expected_results,
+            e.literature_review
         ]
-        existing_texts.append(build_text_for_mode(mode, e.proposed_title, parts))
+
+        existing_texts.append(
+            build_text_for_mode(
+                mode,
+                e.proposed_title,
+                parts
+            )
+        )
 
     new_parts = [
-        sub.background, sub.aim, sub.objectives, sub.methods,
-        sub.expected_results, sub.literature_review
+        sub.background,
+        sub.aim,
+        sub.objectives,
+        sub.methods,
+        sub.expected_results,
+        sub.literature_review
     ]
-    new_text = build_text_for_mode(mode, sub.proposed_title, new_parts)
 
-    sub.similarity_score = compute_similarity_percent(new_text, existing_texts)
+    updated_text = build_text_for_mode(
+        mode,
+        sub.proposed_title,
+        new_parts
+    )
 
-    db.commit()
-    db.refresh(sub)
+    new_similarity = compute_similarity_percent(
+        updated_text,
+        existing_texts
+    )
+
+    sub.similarity_score = new_similarity
+
+    # ---------------------------------
+    # SAVE UPDATED PROPOSAL AND SCORE
+    # ---------------------------------
+    try:
+        db.commit()
+        db.refresh(sub)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update submission. Please try again."
+        )
+
+    return {
+        "id": sub.id,
+        "similarity": sub.similarity_score,
+        "message": "Submission updated successfully. Similarity has been recalculated."
+    }
 
     return {
         "id": sub.id,
@@ -497,30 +572,52 @@ def get_student_submissions(
 # ============================================================
 # ADMIN / LECTURER VIEW ALL SUBMISSIONS
 # ============================================================
-
 @router.get("/submissions")
 def get_all_submissions(
     academic_session_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Students cannot access this endpoint
     if current_user.role == RoleEnum.student:
         raise HTTPException(
             status_code=403,
             detail="Not authorized"
         )
 
-    # Start with all submissions
+    # Admin: default to the active academic session.
+    if current_user.role == RoleEnum.admin and academic_session_id is None:
+        active_session = db.query(AcademicSession).filter(
+            AcademicSession.is_active == True
+        ).first()
+
+        if not active_session:
+            raise HTTPException(
+                status_code=409,
+                detail="No active academic session has been configured."
+            )
+
+        academic_session_id = active_session.id
+
     query = db.query(Submission)
 
-    # Restrict lecturers to their assigned students
+    # Lecturers can only see submissions assigned to them.
     if current_user.role == RoleEnum.lecturer:
         query = query.filter(
             Submission.supervisor_id == current_user.id
         )
 
-    # Apply academic session filter
+        if academic_session_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Select an academic session."
+            )
+
+    elif current_user.role != RoleEnum.admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized"
+        )
+
     if academic_session_id is not None:
         query = query.filter(
             Submission.academic_session_id == academic_session_id
@@ -537,27 +634,21 @@ def get_all_submissions(
             "id": s.id,
             "proposal_type": s.proposal_type.value,
             "proposed_title": s.proposed_title,
-
-            # Proposal details
             "background": s.background,
             "aim": s.aim,
             "objectives": s.objectives,
             "methods": s.methods,
             "expected_results": s.expected_results,
             "literature_review": s.literature_review,
-
-            # Similarity and CA
             "similarity_score": float(s.similarity_score or 0),
             "ca_score": s.ca_score,
 
-            # Academic session
             "academic_session_id": s.academic_session_id,
             "academic_session": (
                 s.academic_session.name
                 if s.academic_session else None
             ),
 
-            # Student information
             "student": {
                 "id": s.student.id,
                 "name": s.student.name,
@@ -566,18 +657,14 @@ def get_all_submissions(
                 "matric_year": s.student.matric_year
             } if s.student else None,
 
-            # Supervisor information
             "supervisor": {
                 "id": s.supervisor.id,
                 "name": s.supervisor.name,
                 "email": s.supervisor.email
             } if s.supervisor else None,
 
-            # Decisions
             "lecturer_decision": s.lecturer_decision,
             "final_decision": s.final_decision,
-
-            # Dates
             "created_at": s.created_at
         })
 
