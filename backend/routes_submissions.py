@@ -164,25 +164,25 @@ def submit_proposal(
 
     if existing_same_type:
 
-    if (
-        existing_same_type.final_decision
-        and existing_same_type.final_decision.lower() == "approved"
-    ):
+        if (
+            existing_same_type.final_decision
+            and existing_same_type.final_decision.lower() == "approved"
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Your {payload.proposal_type.value} has already been approved. "
+                    "A new submission or edit is not allowed."
+                )
+            )
+    
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Your {payload.proposal_type.value} has already been approved. "
-                "A new submission or edit is not allowed."
+                f"You already have a {payload.proposal_type.value} submission "
+                "for this academic session. Please edit your existing submission."
             )
         )
-
-    raise HTTPException(
-        status_code=400,
-        detail=(
-            f"You already have a {payload.proposal_type.value} submission "
-            "for this academic session. Please edit your existing submission."
-        )
-    )
 
     # ---------------------------------
     # SIMILARITY MODE
