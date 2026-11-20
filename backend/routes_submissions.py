@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from database import get_db
 from models import (
@@ -259,14 +260,24 @@ def submit_proposal(
         db.add(submission)
         db.commit()
         db.refresh(submission)
-
+    
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"You already have a {payload.proposal_type.value} "
+                "submission for this academic session. "
+                "Please edit your existing submission."
+            )
+        )
+    
     except Exception:
         db.rollback()
         raise HTTPException(
             status_code=500,
             detail="Submission could not be saved. Please try again."
         )
-
     # ---------------------------------
     # NOTIFY STUDENT
     # ---------------------------------
@@ -454,7 +465,17 @@ def update_submission(
     try:
         db.commit()
         db.refresh(sub)
-
+    
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A submission already exists for this category "
+                "in your academic session."
+            )
+        )
+    
     except Exception:
         db.rollback()
         raise HTTPException(
@@ -468,11 +489,6 @@ def update_submission(
         "message": "Submission updated successfully. Similarity has been recalculated."
     }
 
-    return {
-        "id": sub.id,
-        "similarity": sub.similarity_score,
-        "message": "Submission updated successfully"
-    }
 
 # ============================================================
 #   VIEW STUDENT SUBMISSIONS
