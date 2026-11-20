@@ -10,7 +10,7 @@ from models import User
 # Load secure config
 SECRET_KEY = os.environ.get("SECRET_KEY", "change_me_in_prod")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(  os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 # ✅ The frontend calls /auth/login to get tokens
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
